@@ -1,5 +1,8 @@
 // SpanishLens Popup Script
 
+// ── UPDATE THIS with your GitHub Pages URL after deploying ──
+const WORDBANK_URL = 'https://YOUR_USERNAME.github.io/spanishlens/';
+
 document.addEventListener('DOMContentLoaded', async () => {
   chrome.runtime.sendMessage({ type: 'GET_WORDS' }, ({ words }) => {
     const total = words.length;
@@ -26,3 +29,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.tabs.create({ url: 'https://samuelbingham07.github.io/clicktionarywebextension/' });
   });
 });
+
