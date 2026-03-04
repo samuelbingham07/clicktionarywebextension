@@ -1,9 +1,7 @@
 // SpanishLens Bridge Content Script
-// Injected into the hosted website to pass chrome.storage data to the page
+// Injected into the GitHub Pages site to pass chrome.storage data to the page
 
-// Listen for requests from the website
 window.addEventListener('message', async (event) => {
-  // Only accept messages from our own page
   if (event.source !== window) return;
   if (!event.data?.type?.startsWith('SPANISHLENS_')) return;
 
