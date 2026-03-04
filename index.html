@@ -638,22 +638,12 @@ window.addEventListener('message', async (e) => {
 });
 
 async function init() {
+  // If bridge connects after init, the bridge listener will reload words automatically.
+  // We wait briefly to give bridge.js a chance to fire before falling back to localStorage.
+  await new Promise(resolve => setTimeout(resolve, 150));
   allWords = await Store.getWords();
   renderStats();
   renderWordGrid();
-
-  // Demo words if empty
-  if (allWords.length === 0) {
-    const demos = [
-      { id: 1, spanish: 'hola', english: 'hello', pos: 'interjection', addedAt: new Date().toISOString(), strength: 4 },
-      { id: 2, spanish: 'gato', english: 'cat', pos: 'noun', addedAt: new Date().toISOString(), strength: 2 },
-      { id: 3, spanish: 'buenos días', english: 'good morning', pos: 'phrase', addedAt: new Date().toISOString(), strength: 1 },
-      { id: 4, spanish: 'libro', english: 'book', pos: 'noun', addedAt: new Date().toISOString(), strength: 3 },
-    ];
-    allWords = demos;
-    renderStats();
-    renderWordGrid();
-  }
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
