@@ -29,7 +29,7 @@
         "<all_urls>"
       ],
       "exclude_matches": [
-        "https://YOUR_USERNAME.github.io/*"
+        "https://samuelbingham07.github.io/*"
       ],
       "js": [
         "content.js"
@@ -40,7 +40,7 @@
     },
     {
       "matches": [
-        "https://YOUR_USERNAME.github.io/spanishlens/*",
+        "https://samuelbingham07.github.io/spanishlens/*",
         "http://localhost/*"
       ],
       "js": [
