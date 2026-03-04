@@ -581,18 +581,6 @@ function bridgeRequest(requestType, responseType, payload = {}) {
   });
 }
 
-// Listen for bridge.js to signal it's ready
-window.addEventListener('message', async (e) => {
-  if (e.data?.type === 'SPANISHLENS_BRIDGE_READY') {
-    bridgeReady = true;
-    console.log('SpanishLens: extension bridge connected ✓');
-    // Reload words from real extension storage now that bridge is live
-    allWords = await Store.getWords();
-    renderStats();
-    renderWordGrid();
-  }
-});
-
 const Store = {
   async getWords() {
     if (bridgeReady) {
@@ -637,6 +625,18 @@ let practiceIndex = 0;
 let isFlipped = false;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
+// ── Bridge listener ──────────────────────────────────────────────────────────
+// Must be declared after state variables and render functions
+window.addEventListener('message', async (e) => {
+  if (e.data?.type === 'SPANISHLENS_BRIDGE_READY') {
+    bridgeReady = true;
+    console.log('SpanishLens: extension bridge connected ✓');
+    allWords = await Store.getWords();
+    renderStats();
+    renderWordGrid();
+  }
+});
+
 async function init() {
   allWords = await Store.getWords();
   renderStats();
