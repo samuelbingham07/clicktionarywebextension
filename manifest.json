@@ -40,7 +40,7 @@
     },
     {
       "matches": [
-        "https://samuelbingham07.github.io/spanishlens/*",
+        "https://samuelbingham07.github.io/clicktionarywebextension/*",
         "http://localhost/*"
       ],
       "js": [
