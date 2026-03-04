@@ -1,7 +1,7 @@
 // SpanishLens Popup Script
 
 // ── UPDATE THIS with your GitHub Pages URL after deploying ──
-const WORDBANK_URL = 'https://YOUR_USERNAME.github.io/spanishlens/';
+const WORDBANK_URL = 'https://samuelbingham07.github.io/spanishlens/';
 
 document.addEventListener('DOMContentLoaded', async () => {
   chrome.runtime.sendMessage({ type: 'GET_WORDS' }, ({ words }) => {
