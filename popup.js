@@ -23,6 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('openWordBank').addEventListener('click', () => {
     // Opens the companion website — update URL to your hosted site
-    chrome.tabs.create({ url: 'https://your-spanishlens-site.com' });
+    chrome.tabs.create({ url: 'https://samuelbingham07.github.io/clicktionarywebextension/' });
   });
 });
