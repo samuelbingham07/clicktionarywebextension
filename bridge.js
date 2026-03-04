@@ -1,11 +1,14 @@
 // SpanishLens Bridge Content Script
 // Injected into the hosted website to pass chrome.storage data to the page
 
+console.log('SpanishLens: bridge.js injected ✓');
+
 // Listen for requests from the website
 window.addEventListener('message', async (event) => {
-  // Only accept messages from our own page
   if (event.source !== window) return;
   if (!event.data?.type?.startsWith('SPANISHLENS_')) return;
+
+  console.log('SpanishLens bridge received:', event.data.type);
 
   const { type, payload } = event.data;
 
@@ -46,5 +49,6 @@ window.addEventListener('message', async (event) => {
 });
 
 // Signal to the page that the extension bridge is ready
+console.log('SpanishLens: sending BRIDGE_READY signal');
 window.postMessage({ type: 'SPANISHLENS_BRIDGE_READY' }, '*');
-
+console.log('SpanishLens: BRIDGE_READY sent');
