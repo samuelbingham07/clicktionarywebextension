@@ -496,20 +496,6 @@
     .empty-sub { font-size: 14px; line-height: 1.6; }
 
     /* ── Responsive ── */
-    .bridge-status {
-      font-size: 11px;
-      font-family: 'DM Sans', sans-serif;
-      padding: 4px 10px;
-      border-radius: 99px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .bridge-status.connected { border-color: var(--green); color: var(--green); }
-    .bridge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-
     @media (max-width: 700px) {
       nav { padding: 16px 20px; }
       .hero { padding: 24px 20px 20px; flex-direction: column; align-items: flex-start; }
@@ -526,7 +512,7 @@
       <button class="nav-tab active" data-view="bank">Word Bank</button>
       <button class="nav-tab" data-view="practice">Practice</button>
     </div>
-    <div style="display:flex;align-items:center;gap:10px"><div class="nav-count" id="navCount">0 words</div><div class="bridge-status" id="bridgeStatus"><span class="bridge-dot"></span><span id="bridgeLabel">No extension</span></div></div>
+    <div class="nav-count" id="navCount">0 words</div>
   </nav>
 
   <div class="hero">
@@ -577,29 +563,10 @@
 
 <script>
 // ── Data Layer ───────────────────────────────────────────────────────────────
-// Three-tier storage strategy:
-//   1. Extension bridge  — when opened from SpanishLens extension (postMessage)
-//   2. localStorage      — standalone / local file testing fallback
+// Uses postMessage bridge when extension is present, localStorage otherwise.
 
 let bridgeReady = false;
 
-// Listen for the bridge content script to signal it's loaded
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'SPANISHLENS_BRIDGE_READY') {
-    bridgeReady = true;
-    console.log('SpanishLens: extension bridge connected ✓');
-    const el = document.getElementById('bridgeStatus');
-    const lbl = document.getElementById('bridgeLabel');
-    if (el) el.classList.add('connected');
-    if (lbl) lbl.textContent = 'Extension connected';
-    // Reload words now that bridge is ready
-    allWords = await Store.getWords();
-    renderStats();
-    renderWordGrid();
-  }
-});
-
-// Helper: send a message to the bridge and await a response
 function bridgeRequest(requestType, responseType, payload = {}) {
   return new Promise((resolve) => {
     function handler(e) {
@@ -610,10 +577,21 @@ function bridgeRequest(requestType, responseType, payload = {}) {
     }
     window.addEventListener('message', handler);
     window.postMessage({ type: requestType, payload }, '*');
-    // Timeout fallback after 2s
     setTimeout(() => { window.removeEventListener('message', handler); resolve(null); }, 2000);
   });
 }
+
+// Listen for bridge.js to signal it's ready
+window.addEventListener('message', async (e) => {
+  if (e.data?.type === 'SPANISHLENS_BRIDGE_READY') {
+    bridgeReady = true;
+    console.log('SpanishLens: extension bridge connected ✓');
+    // Reload words from real extension storage now that bridge is live
+    allWords = await Store.getWords();
+    renderStats();
+    renderWordGrid();
+  }
+});
 
 const Store = {
   async getWords() {
