@@ -25,9 +25,28 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "exclude_matches": [
+        "https://YOUR_USERNAME.github.io/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ]
+    },
+    {
+      "matches": [
+        "https://YOUR_USERNAME.github.io/spanishlens/*",
+        "http://localhost/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start"
     }
   ],
   "icons": {
