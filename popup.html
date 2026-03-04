@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpanishLens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 280px;
+      background: #1a1a2e;
+      color: #f0f0f0;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #16213e, #0f3460);
+      padding: 20px 18px 16px;
+      border-bottom: 2px solid #e94560;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: #e94560;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 20px;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-text span { color: #e94560; }
+
+    .subtitle {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 4px;
+      font-family: Arial, sans-serif;
+      letter-spacing: 0.04em;
+    }
+
+    .stats {
+      padding: 16px 18px;
+      display: flex;
+      gap: 12px;
+    }
+
+    .stat {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat-number {
+      font-size: 22px;
+      font-weight: bold;
+      color: #e94560;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #888;
+      font-family: Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 2px;
+    }
+
+    .recent {
+      padding: 0 18px 16px;
+    }
+
+    .section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #666;
+      font-family: Arial, sans-serif;
+      margin-bottom: 8px;
+    }
+
+    .word-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .word-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border-radius: 6px;
+      padding: 7px 10px;
+      border-left: 2px solid #e94560;
+    }
+
+    .word-es {
+      font-size: 13px;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .word-en {
+      font-size: 11px;
+      color: #aaa;
+      font-family: Arial, sans-serif;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 16px;
+      color: #555;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      font-style: italic;
+    }
+
+    .footer {
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .open-btn {
+      width: 100%;
+      background: #e94560;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+    }
+
+    .open-btn:hover { background: #c73652; }
+
+    .tip {
+      margin-top: 8px;
+      font-size: 10px;
+      color: #555;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🔍</div>
+      <div>
+        <div class="logo-text">Spanish<span>Lens</span></div>
+      </div>
+    </div>
+    <div class="subtitle">Highlight any Spanish text to get definitions</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-number" id="totalWords">0</div>
+      <div class="stat-label">Words Saved</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number" id="masteredWords">0</div>
+      <div class="stat-label">Mastered</div>
+    </div>
+  </div>
+
+  <div class="recent">
+    <div class="section-title">Recently Added</div>
+    <div class="word-list" id="wordList">
+      <div class="empty-state">No words yet — highlight some Spanish text!</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="open-btn" id="openWordBank">Open Word Bank & Practice →</button>
+    <div class="tip">Highlight Spanish text on any webpage to save words</div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

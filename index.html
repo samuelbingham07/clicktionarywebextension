@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpanishLens — Word Bank</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0d1a;
+      --surface: #12122a;
+      --surface2: #1a1a35;
+      --accent: #e94560;
+      --accent2: #f5a623;
+      --text: #f0eee8;
+      --muted: #7a7a9a;
+      --border: rgba(255,255,255,0.07);
+      --green: #4ecb71;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .app { position: relative; z-index: 1; }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,13,26,0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .nav-tab {
+      padding: 8px 20px;
+      border-radius: 7px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .nav-tab:hover:not(.active) { color: var(--text); }
+
+    .nav-count {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ── Hero strip ── */
+    .hero {
+      padding: 48px 48px 32px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-title em {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 24px;
+      text-align: center;
+      min-width: 90px;
+    }
+
+    .stat-card .num {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .stat-card .lbl {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+
+    /* ── Main content ── */
+    main { padding: 0 48px 64px; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Word Bank View ── */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--muted); }
+
+    .filter-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active { border-color: var(--accent); color: var(--accent); }
+    .filter-btn:hover:not(.active) { color: var(--text); }
+
+    .word-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .word-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      position: relative;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      cursor: default;
+    }
+
+    .word-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      border-color: rgba(233,69,96,0.3);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .card-es {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .card-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+    }
+
+    .word-card:hover .card-delete { opacity: 1; }
+    .card-delete:hover { color: var(--accent); }
+
+    .card-pos {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .card-en {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .strength-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.2s;
+    }
+
+    .dot.filled { background: var(--green); }
+    .dot.partial { background: var(--accent2); }
+
+    .card-date {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ── Practice View ── */
+    .practice-container {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .practice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .practice-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .mode-btn {
+      padding: 6px 14px;
+      border-radius: 5px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active { background: var(--surface2); color: var(--text); }
+
+    /* Flashcard */
+    .flashcard-scene {
+      perspective: 1000px;
+      margin-bottom: 24px;
+    }
+
+    .flashcard {
+      width: 100%;
+      min-height: 240px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .flashcard.flipped { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+      min-height: 240px;
+    }
+
+    .card-back { transform: rotateY(180deg); }
+
+    .card-face .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .card-face .main-word {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .card-face .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    .card-back .main-word { color: var(--accent); }
+
+    .card-controls {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .ctrl-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn .icon { font-size: 22px; }
+    .ctrl-btn.wrong:hover { border-color: var(--accent); background: rgba(233,69,96,0.1); }
+    .ctrl-btn.hard:hover { border-color: var(--accent2); background: rgba(245,166,35,0.1); }
+    .ctrl-btn.correct:hover { border-color: var(--green); background: rgba(78,203,113,0.1); }
+
+    .progress-bar-wrap {
+      background: var(--surface);
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .progress-label {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+
+    /* Multiple choice */
+    .mc-question {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 32px;
+      padding: 32px;
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .mc-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .mc-opt {
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      line-height: 1.3;
+    }
+
+    .mc-opt:hover:not(:disabled) { border-color: var(--accent); }
+    .mc-opt.correct { border-color: var(--green) !important; background: rgba(78,203,113,0.12) !important; color: var(--green); }
+    .mc-opt.wrong { border-color: var(--accent) !important; background: rgba(233,69,96,0.12) !important; color: var(--accent); }
+
+    /* Empty states */
+    .empty {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--muted);
+    }
+
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text); margin-bottom: 8px; }
+    .empty-sub { font-size: 14px; line-height: 1.6; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 24px 20px 20px; flex-direction: column; align-items: flex-start; }
+      main { padding: 0 20px 48px; }
+      .stats-row { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <nav>
+    <div class="nav-logo">Spanish<span>Lens</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-view="bank">Word Bank</button>
+      <button class="nav-tab" data-view="practice">Practice</button>
+    </div>
+    <div class="nav-count" id="navCount">0 words</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-title">Your<br><em>Word Bank</em></div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="num" id="statTotal">0</div>
+        <div class="lbl">Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statLearning">0</div>
+        <div class="lbl">Learning</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statMastered">0</div>
+        <div class="lbl">Mastered</div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- Word Bank View -->
+    <div class="view active" id="view-bank">
+      <div class="toolbar">
+        <input class="search-box" id="searchBox" placeholder="Search words..." />
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="learning">Learning</button>
+        <button class="filter-btn" data-filter="mastered">Mastered</button>
+      </div>
+      <div class="word-grid" id="wordGrid"></div>
+    </div>
+
+    <!-- Practice View -->
+    <div class="view" id="view-practice">
+      <div class="practice-container">
+        <div class="practice-header">
+          <div class="practice-title">Practice</div>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="flashcard">Flashcards</button>
+            <button class="mode-btn" data-mode="mc">Multiple Choice</button>
+          </div>
+        </div>
+        <div id="practiceArea"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Data Layer ───────────────────────────────────────────────────────────────
+// This website reads from chrome.storage if available (when opened from extension),
+// otherwise uses localStorage as fallback for standalone testing.
+
+const Store = {
+  async getWords() {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      return new Promise(res => chrome.storage.local.get('wordBank', d => res(d.wordBank || [])));
+    }
+    return JSON.parse(localStorage.getItem('spanishlens_words') || '[]');
+  },
+  async saveWords(words) {
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      return new Promise(res => chrome.storage.local.set({ wordBank: words }, res));
+    }
+    localStorage.setItem('spanishlens_words', JSON.stringify(words));
+  },
+  async deleteWord(id) {
+    const words = await this.getWords();
+    await this.saveWords(words.filter(w => w.id !== id));
+  },
+  async updateWord(id, updates) {
+    const words = await this.getWords();
+    const i = words.findIndex(w => w.id === id);
+    if (i > -1) { words[i] = { ...words[i], ...updates }; await this.saveWords(words); }
+  }
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allWords = [];
+let currentFilter = 'all';
+let searchQuery = '';
+let practiceMode = 'flashcard';
+let practiceQueue = [];
+let practiceIndex = 0;
+let isFlipped = false;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  allWords = await Store.getWords();
+  renderStats();
+  renderWordGrid();
+
+  // Demo words if empty
+  if (allWords.length === 0) {
+    const demos = [
+      { id: 1, spanish: 'hola', english: 'hello', pos: 'interjection', addedAt: new Date().toISOString(), strength: 4 },
+      { id: 2, spanish: 'gato', english: 'cat', pos: 'noun', addedAt: new Date().toISOString(), strength: 2 },
+      { id: 3, spanish: 'buenos días', english: 'good morning', pos: 'phrase', addedAt: new Date().toISOString(), strength: 1 },
+      { id: 4, spanish: 'libro', english: 'book', pos: 'noun', addedAt: new Date().toISOString(), strength: 3 },
+    ];
+    allWords = demos;
+    renderStats();
+    renderWordGrid();
+  }
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const total = allWords.length;
+  const mastered = allWords.filter(w => w.strength >= 4).length;
+  const learning = total - mastered;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statLearning').textContent = learning;
+  document.getElementById('statMastered').textContent = mastered;
+  document.getElementById('navCount').textContent = `${total} word${total !== 1 ? 's' : ''}`;
+}
+
+// ── Word Bank ────────────────────────────────────────────────────────────────
+function filteredWords() {
+  let words = allWords;
+  if (currentFilter === 'learning') words = words.filter(w => w.strength < 4);
+  if (currentFilter === 'mastered') words = words.filter(w => w.strength >= 4);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    words = words.filter(w => w.spanish.toLowerCase().includes(q) || (w.english || '').toLowerCase().includes(q));
+  }
+  return words;
+}
+
+function renderWordGrid() {
+  const grid = document.getElementById('wordGrid');
+  const words = filteredWords();
+  if (words.length === 0) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="empty-icon">📚</div>
+      <div class="empty-title">No words yet</div>
+      <div class="empty-sub">Highlight Spanish text on any webpage<br>and click "Add to Word Bank"</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = words.map(w => {
+    const date = new Date(w.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const strength = w.strength || 0;
+    const dots = Array.from({ length: 5 }, (_, i) =>
+      `<div class="dot ${i < strength ? (strength >= 4 ? 'filled' : 'partial') : ''}"></div>`
+    ).join('');
+    return `
+      <div class="word-card" data-id="${w.id}">
+        <div class="card-top">
+          <div class="card-es">${w.spanish}</div>
+          <button class="card-delete" data-id="${w.id}" title="Remove">✕</button>
+        </div>
+        ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
+        <div class="card-en">${w.english || '—'}</div>
+        <div class="card-footer">
+          <div class="strength-dots">${dots}</div>
+          <div class="card-date">${date}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.card-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.id);
+      await Store.deleteWord(id);
+      allWords = allWords.filter(w => w.id !== id);
+      renderStats();
+      renderWordGrid();
+    });
+  });
+}
+
+// ── Practice ─────────────────────────────────────────────────────────────────
+function startPractice() {
+  practiceQueue = [...allWords].sort(() => Math.random() - 0.5);
+  practiceIndex = 0;
+  isFlipped = false;
+  renderPractice();
+}
+
+function renderPractice() {
+  const area = document.getElementById('practiceArea');
+  if (practiceQueue.length < 2) {
+    area.innerHTML = `<div class="empty">
+      <div class="empty-icon">🎯</div>
+      <div class="empty-title">Not enough words</div>
+      <div class="empty-sub">Add at least 4 words to your word bank<br>to start practicing</div>
+    </div>`;
+    return;
+  }
+
+  if (practiceIndex >= practiceQueue.length) {
+    area.innerHTML = `<div class="empty">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-title">Round complete!</div>
+      <div class="empty-sub">You reviewed all ${practiceQueue.length} words.</div>
+      <button onclick="startPractice()" style="margin-top:20px;padding:12px 32px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#c73652'" onmouseout="this.style.background='var(--accent)'">Practice Again</button>
+    </div>`;
+    return;
+  }
+
+  const pct = Math.round((practiceIndex / practiceQueue.length) * 100);
+
+  if (practiceMode === 'flashcard') renderFlashcard(area, pct);
+  else renderMultipleChoice(area, pct);
+}
+
+function renderFlashcard(area, pct) {
+  const word = practiceQueue[practiceIndex];
+  area.innerHTML = `
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">${practiceIndex} / ${practiceQueue.length}</div>
+    <div class="flashcard-scene">
+      <div class="flashcard" id="theCard">
+        <div class="card-face card-front">
+          <div class="label">Spanish</div>
+          <div class="main-word">${word.spanish}</div>
+          <div class="hint">Click to reveal</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="label">English</div>
+          <div class="main-word">${word.english || '?'}</div>
+          ${word.pos ? `<div class="hint">${word.pos}</div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="card-controls" id="cardControls" style="display:none">
+      <button class="ctrl-btn wrong" data-result="0"><span class="icon">😕</span>Missed</button>
+      <button class="ctrl-btn hard" data-result="1"><span class="icon">🤔</span>Hard</button>
+      <button class="ctrl-btn correct" data-result="2"><span class="icon">✓</span>Got it!</button>
+    </div>
+  `;
+
+  document.getElementById('theCard').addEventListener('click', () => {
+    document.getElementById('theCard').classList.toggle('flipped');
+    document.getElementById('cardControls').style.display = 'flex';
+  });
+
+  document.querySelectorAll('.ctrl-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const result = Number(btn.dataset.result);
+      const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + result - 0.5));
+      await Store.updateWord(word.id, { strength: Math.round(newStrength) });
+      allWords = await Store.getWords();
+      practiceIndex++;
+      renderPractice();
+    });
+  });
+}
+
+function renderMultipleChoice(area, pct) {
+  const word = practiceQueue[practiceIndex];
+  // Pick 3 random wrong answers
+  const others = allWords.filter(w => w.id !== word.id && w.english).sort(() => Math.random() - 0.5).slice(0, 3);
+  if (others.length < 3) { renderFlashcard(area, pct); return; }
+
+  const options = [...others.map(w => ({ text: w.english, correct: false })), { text: word.english, correct: true }]
+    .sort(() => Math.random() - 0.5);
+
+  area.innerHTML = `
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">${practiceIndex} / ${practiceQueue.length}</div>
+    <div class="mc-question">${word.spanish}</div>
+    <div class="mc-options">
+      ${options.map((o, i) => `<button class="mc-opt" data-correct="${o.correct}" data-idx="${i}">${o.text}</button>`).join('')}
+    </div>
+  `;
+
+  document.querySelectorAll('.mc-opt').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const correct = btn.dataset.correct === 'true';
+      document.querySelectorAll('.mc-opt').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.correct === 'true') b.classList.add('correct');
+        else if (b === btn && !correct) b.classList.add('wrong');
+      });
+      const delta = correct ? 1 : -1;
+      const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + delta));
+      await Store.updateWord(word.id, { strength: newStrength });
+      allWords = await Store.getWords();
+      setTimeout(() => { practiceIndex++; renderPractice(); }, 900);
+    });
+  });
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${tab.dataset.view}`).classList.add('active');
+    if (tab.dataset.view === 'practice') startPractice();
+  });
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderWordGrid();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  renderWordGrid();
+});
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    practiceMode = btn.dataset.mode;
+    startPractice();
+  });
+});
+
+init();
+</script>
+</body>
+</html>
