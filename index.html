@@ -563,55 +563,44 @@
 
 <script>
 // ── Data Layer ───────────────────────────────────────────────────────────────
-// Uses postMessage bridge when extension is present, localStorage otherwise.
+// Words are passed from the extension via URL hash (#words=base64encoded)
+// Updates are saved to localStorage so practice scores persist in the session.
 
-let bridgeReady = false;
-
-function bridgeRequest(requestType, responseType, payload = {}) {
-  return new Promise((resolve) => {
-    function handler(e) {
-      if (e.data?.type === responseType) {
-        window.removeEventListener('message', handler);
-        resolve(e.data);
-      }
+function loadWordsFromHash() {
+  try {
+    const hash = window.location.hash;
+    const match = hash.match(/#words=(.+)/);
+    if (match) {
+      const decoded = decodeURIComponent(escape(atob(match[1])));
+      const words = JSON.parse(decoded);
+      // Merge with any locally saved strength scores
+      const local = JSON.parse(localStorage.getItem('spanishlens_scores') || '{}');
+      return words.map(w => ({ ...w, strength: local[w.id] ?? w.strength }));
     }
-    window.addEventListener('message', handler);
-    window.postMessage({ type: requestType, payload }, '*');
-    setTimeout(() => { window.removeEventListener('message', handler); resolve(null); }, 2000);
-  });
+  } catch (e) {
+    console.error('SpanishLens: failed to parse words from URL', e);
+  }
+  return JSON.parse(localStorage.getItem('spanishlens_words') || '[]');
 }
 
 const Store = {
   async getWords() {
-    if (bridgeReady) {
-      const res = await bridgeRequest('SPANISHLENS_GET_WORDS', 'SPANISHLENS_WORDS_RESPONSE');
-      if (res) return res.words;
-    }
-    return JSON.parse(localStorage.getItem('spanishlens_words') || '[]');
+    return loadWordsFromHash();
   },
   async saveWords(words) {
-    if (bridgeReady) {
-      await bridgeRequest('SPANISHLENS_SAVE_WORDS', 'SPANISHLENS_SAVE_RESPONSE', { words });
-      return;
-    }
     localStorage.setItem('spanishlens_words', JSON.stringify(words));
   },
   async deleteWord(id) {
-    if (bridgeReady) {
-      await bridgeRequest('SPANISHLENS_DELETE_WORD', 'SPANISHLENS_DELETE_RESPONSE', { id });
-      return;
-    }
-    const words = await this.getWords();
-    await this.saveWords(words.filter(w => w.id !== id));
+    // Deletions only affect the local session view (can't write back to extension from here)
+    allWords = allWords.filter(w => w.id !== id);
   },
   async updateWord(id, updates) {
-    if (bridgeReady) {
-      await bridgeRequest('SPANISHLENS_UPDATE_WORD', 'SPANISHLENS_UPDATE_RESPONSE', { id, updates });
-      return;
-    }
-    const words = await this.getWords();
-    const i = words.findIndex(w => w.id === id);
-    if (i > -1) { words[i] = { ...words[i], ...updates }; await this.saveWords(words); }
+    // Save strength scores locally so practice progress persists
+    const scores = JSON.parse(localStorage.getItem('spanishlens_scores') || '{}');
+    if (updates.strength !== undefined) scores[id] = updates.strength;
+    localStorage.setItem('spanishlens_scores', JSON.stringify(scores));
+    const i = allWords.findIndex(w => w.id === id);
+    if (i > -1) allWords[i] = { ...allWords[i], ...updates };
   }
 };
 
@@ -624,23 +613,7 @@ let practiceQueue = [];
 let practiceIndex = 0;
 let isFlipped = false;
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-// ── Bridge listener ──────────────────────────────────────────────────────────
-// Must be declared after state variables and render functions
-window.addEventListener('message', async (e) => {
-  if (e.data?.type === 'SPANISHLENS_BRIDGE_READY') {
-    bridgeReady = true;
-    console.log('SpanishLens: extension bridge connected ✓');
-    allWords = await Store.getWords();
-    renderStats();
-    renderWordGrid();
-  }
-});
-
 async function init() {
-  // If bridge connects after init, the bridge listener will reload words automatically.
-  // We wait briefly to give bridge.js a chance to fire before falling back to localStorage.
-  await new Promise(resolve => setTimeout(resolve, 150));
   allWords = await Store.getWords();
   renderStats();
   renderWordGrid();
