@@ -1,7 +1,6 @@
 // SpanishLens Popup Script
 
-// ── UPDATE THIS with your GitHub Pages URL after deploying ──
-const WORDBANK_URL = 'https://samuelbingham07.github.io/clicktionarywebextension/';
+const WORDBANK_BASE = 'https://samuelbingham07.github.io/clicktionarywebextension/';
 
 document.addEventListener('DOMContentLoaded', async () => {
   chrome.runtime.sendMessage({ type: 'GET_WORDS' }, ({ words }) => {
@@ -14,7 +13,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const list = document.getElementById('wordList');
     if (total === 0) return;
 
-    // Show 5 most recent
     const recent = [...words].reverse().slice(0, 5);
     list.innerHTML = recent.map(w => `
       <div class="word-item">
@@ -25,6 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('openWordBank').addEventListener('click', () => {
-    chrome.tabs.create({ url: WORDBANK_URL });
+    chrome.runtime.sendMessage({ type: 'GET_WORDS' }, ({ words }) => {
+      // Encode words into the URL hash — website reads them on load, no bridge needed
+      const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(words))));
+      chrome.tabs.create({ url: WORDBANK_BASE + '#words=' + encoded });
+    });
   });
 });
