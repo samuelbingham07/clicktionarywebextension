@@ -9,28 +9,28 @@ function createTooltip() {
   const el = document.createElement('div');
   el.id = 'clicktionary-tooltip';
   el.innerHTML = `
-    <div class="sl-header">
-      <span class="sl-word"></span>
-      <button class="sl-close">✕</button>
+    <div class="ct-header">
+      <span class="ct-word"></span>
+      <button class="ct-close">✕</button>
     </div>
-    <div class="sl-body">
-      <div class="sl-loading">Looking up...</div>
-      <div class="sl-result" style="display:none">
-        <div class="sl-pos"></div>
-        <div class="sl-definition"></div>
-        <div class="sl-examples"></div>
+    <div class="ct-body">
+      <div class="ct-loading">Looking up...</div>
+      <div class="ct-result" style="display:none">
+        <div class="ct-pos"></div>
+        <div class="ct-definition"></div>
+        <div class="ct-examples"></div>
       </div>
-      <div class="sl-error" style="display:none">Could not find definition.</div>
+      <div class="ct-error" style="display:none">Could not find definition.</div>
     </div>
-    <div class="sl-footer">
-      <button class="sl-add-btn">＋ Add to Word Bank</button>
-      <span class="sl-saved-msg">✓ Saved!</span>
+    <div class="ct-footer">
+      <button class="ct-add-btn">＋ Add to Word Bank</button>
+      <span class="ct-saved-msg">✓ Saved!</span>
     </div>
   `;
   document.body.appendChild(el);
 
-  el.querySelector('.sl-close').addEventListener('click', hideTooltip);
-  el.querySelector('.sl-add-btn').addEventListener('click', () => addToWordBank());
+  el.querySelector('.ct-close').addEventListener('click', hideTooltip);
+  el.querySelector('.ct-add-btn').addEventListener('click', () => addToWordBank());
 
   return el;
 }
@@ -147,27 +147,27 @@ document.addEventListener('mouseup', async (e) => {
   lastDefinition = null;
 
   // Reset UI
-  t.querySelector('.sl-word').textContent = text;
-  t.querySelector('.sl-loading').style.display = 'block';
-  t.querySelector('.sl-result').style.display = 'none';
-  t.querySelector('.sl-error').style.display = 'none';
-  t.querySelector('.sl-saved-msg').style.display = 'none';
-  t.querySelector('.sl-add-btn').style.display = 'inline-flex';
+  t.querySelector('.ct-word').textContent = text;
+  t.querySelector('.ct-loading').style.display = 'block';
+  t.querySelector('.ct-result').style.display = 'none';
+  t.querySelector('.ct-error').style.display = 'none';
+  t.querySelector('.ct-saved-msg').style.display = 'none';
+  t.querySelector('.ct-add-btn').style.display = 'inline-flex';
 
   positionTooltip(rect);
 
   const def = await fetchDefinition(text);
   lastDefinition = def;
 
-  t.querySelector('.sl-loading').style.display = 'none';
+  t.querySelector('.ct-loading').style.display = 'none';
 
   if (def) {
-    t.querySelector('.sl-pos').textContent = def.pos ? `(${def.pos})` : '';
-    t.querySelector('.sl-definition').textContent = def.definition;
-    t.querySelector('.sl-examples').textContent = def.example ? `"${def.example}"` : '';
-    t.querySelector('.sl-result').style.display = 'block';
+    t.querySelector('.ct-pos').textContent = def.pos ? `(${def.pos})` : '';
+    t.querySelector('.ct-definition').textContent = def.definition;
+    t.querySelector('.ct-examples').textContent = def.example ? `"${def.example}"` : '';
+    t.querySelector('.ct-result').style.display = 'block';
   } else {
-    t.querySelector('.sl-error').style.display = 'block';
+    t.querySelector('.ct-error').style.display = 'block';
   }
 });
 
@@ -189,8 +189,8 @@ async function addToWordBank() {
   chrome.runtime.sendMessage({ type: 'ADD_WORD', entry }, (response) => {
     if (response?.success) {
       const t = getTooltip();
-      t.querySelector('.sl-add-btn').style.display = 'none';
-      t.querySelector('.sl-saved-msg').style.display = 'inline';
+      t.querySelector('.ct-add-btn').style.display = 'none';
+      t.querySelector('.ct-saved-msg').style.display = 'inline';
     }
   });
 }
