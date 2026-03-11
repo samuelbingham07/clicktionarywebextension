@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "SpanishLens",
+  "name": "Clicktionary",
   "version": "1.0",
-  "description": "Highlight Spanish words to get English definitions and build your personal word bank.",
+  "description": "Highlight Spanish words to get English definitions and build your personal word bank. Powered by Clicktionary.",
   "permissions": [
     "storage",
     "activeTab",
@@ -16,7 +16,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "SpanishLens",
+    "default_title": "Clicktionary",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",

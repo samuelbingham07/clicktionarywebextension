@@ -1,4 +1,4 @@
-// SpanishLens Background Service Worker
+// Clicktionary Background Service Worker
 // Handles word bank storage
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -38,7 +38,7 @@ async function addWord(entry) {
     await chrome.storage.local.set({ wordBank: words });
     return true;
   } catch (e) {
-    console.error('SpanishLens: Failed to add word', e);
+    console.error('Clicktionary: Failed to add word', e);
     return false;
   }
 }

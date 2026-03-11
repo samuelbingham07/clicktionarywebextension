@@ -1,21 +1,21 @@
-/* SpanishLens Tooltip Styles */
+/* Clicktionary Tooltip Styles */
 
-#spanishlens-tooltip {
+#clicktionary-tooltip {
   position: absolute;
   z-index: 2147483647;
   width: 300px;
-  background: #1a1a2e;
-  border: 1px solid #e94560;
+  background: #ffffff;
+  border: 1.5px solid #f5e642;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(233, 69, 96, 0.25), 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 32px rgba(245, 230, 66, 0.3), 0 2px 8px rgba(0,0,0,0.12);
   font-family: 'Georgia', 'Times New Roman', serif;
-  color: #f0f0f0;
+  color: #222222;
   overflow: hidden;
   display: none;
-  animation: sl-appear 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: ct-appear 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes sl-appear {
+@keyframes ct-appear {
   from { opacity: 0; transform: translateY(6px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
@@ -25,14 +25,14 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px 8px;
-  background: rgba(233, 69, 96, 0.12);
-  border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+  background: #fffde7;
+  border-bottom: 1.5px solid #f5e642;
 }
 
 .sl-word {
   font-size: 16px;
   font-weight: bold;
-  color: #e94560;
+  color: #b8a000;
   letter-spacing: 0.03em;
   max-width: 230px;
   overflow: hidden;
@@ -43,35 +43,36 @@
 .sl-close {
   background: none;
   border: none;
-  color: #888;
+  color: #aaa;
   cursor: pointer;
   font-size: 13px;
   padding: 2px 4px;
   border-radius: 4px;
   transition: color 0.15s, background 0.15s;
 }
-.sl-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.sl-close:hover { color: #333; background: rgba(0,0,0,0.06); }
 
 .sl-body {
   padding: 12px 14px 10px;
   min-height: 48px;
+  background: #ffffff;
 }
 
 .sl-loading {
-  color: #888;
+  color: #aaa;
   font-size: 13px;
   font-style: italic;
-  animation: sl-pulse 1s ease-in-out infinite alternate;
+  animation: ct-pulse 1s ease-in-out infinite alternate;
 }
 
-@keyframes sl-pulse {
+@keyframes ct-pulse {
   from { opacity: 0.5; }
   to   { opacity: 1; }
 }
 
 .sl-pos {
   font-size: 11px;
-  color: #e94560;
+  color: #b8a000;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-bottom: 4px;
@@ -81,34 +82,35 @@
 .sl-definition {
   font-size: 14px;
   line-height: 1.5;
-  color: #e8e8e8;
+  color: #222222;
 }
 
 .sl-examples {
   margin-top: 6px;
   font-size: 12px;
-  color: #aaa;
+  color: #777;
   font-style: italic;
   line-height: 1.4;
 }
 
 .sl-error {
   font-size: 13px;
-  color: #888;
+  color: #aaa;
   font-style: italic;
 }
 
 .sl-footer {
   padding: 8px 14px 12px;
-  border-top: 1px solid rgba(255,255,255,0.07);
+  border-top: 1px solid #f5f0c0;
+  background: #ffffff;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .sl-add-btn {
-  background: #e94560;
-  color: #fff;
+  background: #f5e642;
+  color: #333;
   border: none;
   border-radius: 6px;
   padding: 6px 14px;
@@ -122,12 +124,12 @@
   align-items: center;
   gap: 4px;
 }
-.sl-add-btn:hover { background: #c73652; transform: scale(1.03); }
+.sl-add-btn:hover { background: #e6d800; transform: scale(1.03); }
 .sl-add-btn:active { transform: scale(0.98); }
 
 .sl-saved-msg {
   font-size: 12px;
-  color: #4ecb71;
+  color: #4caf50;
   font-family: 'Arial', sans-serif;
   font-weight: 600;
   display: none;

@@ -1,4 +1,4 @@
-// SpanishLens Popup Script
+// Clicktionary Popup Script
 
 const WORDBANK_BASE = 'https://samuelbingham07.github.io/clicktionarywebextension/';
 

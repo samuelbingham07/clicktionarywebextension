@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SpanishLens</title>
+  <title>Clicktionary</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       width: 280px;
-      background: #1a1a2e;
-      color: #f0f0f0;
+      background: #ffffff;
+      color: #222222;
       font-family: Georgia, 'Times New Roman', serif;
     }
 
     .header {
-      background: linear-gradient(135deg, #16213e, #0f3460);
+      background: #fffde7;
       padding: 20px 18px 16px;
-      border-bottom: 2px solid #e94560;
+      border-bottom: 2px solid #f5e642;
     }
 
     .logo {
@@ -29,7 +29,7 @@
     .logo-icon {
       width: 32px;
       height: 32px;
-      background: #e94560;
+      background: #f5e642;
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -40,15 +40,15 @@
     .logo-text {
       font-size: 20px;
       font-weight: bold;
-      color: #fff;
+      color: #222;
       letter-spacing: -0.02em;
     }
 
-    .logo-text span { color: #e94560; }
+    .logo-text span { color: #b8a000; }
 
     .subtitle {
       font-size: 11px;
-      color: #aaa;
+      color: #888;
       margin-top: 4px;
       font-family: Arial, sans-serif;
       letter-spacing: 0.04em;
@@ -58,21 +58,22 @@
       padding: 16px 18px;
       display: flex;
       gap: 12px;
+      background: #fff;
     }
 
     .stat {
       flex: 1;
-      background: rgba(255,255,255,0.05);
+      background: #fffde7;
       border-radius: 8px;
       padding: 10px;
       text-align: center;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid #f5e642;
     }
 
     .stat-number {
       font-size: 22px;
       font-weight: bold;
-      color: #e94560;
+      color: #b8a000;
     }
 
     .stat-label {
@@ -86,13 +87,14 @@
 
     .recent {
       padding: 0 18px 16px;
+      background: #fff;
     }
 
     .section-title {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #666;
+      color: #aaa;
       font-family: Arial, sans-serif;
       margin-bottom: 8px;
     }
@@ -107,21 +109,21 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255,255,255,0.04);
+      background: #fffde7;
       border-radius: 6px;
       padding: 7px 10px;
-      border-left: 2px solid #e94560;
+      border-left: 2px solid #f5e642;
     }
 
     .word-es {
       font-size: 13px;
-      color: #fff;
+      color: #222;
       font-weight: bold;
     }
 
     .word-en {
       font-size: 11px;
-      color: #aaa;
+      color: #888;
       font-family: Arial, sans-serif;
       max-width: 140px;
       overflow: hidden;
@@ -133,7 +135,7 @@
     .empty-state {
       text-align: center;
       padding: 16px;
-      color: #555;
+      color: #bbb;
       font-size: 12px;
       font-family: Arial, sans-serif;
       font-style: italic;
@@ -141,13 +143,14 @@
 
     .footer {
       padding: 12px 18px;
-      border-top: 1px solid rgba(255,255,255,0.07);
+      border-top: 1px solid #f5f0c0;
+      background: #fff;
     }
 
     .open-btn {
       width: 100%;
-      background: #e94560;
-      color: #fff;
+      background: #f5e642;
+      color: #333;
       border: none;
       border-radius: 8px;
       padding: 10px;
@@ -159,12 +162,12 @@
       transition: background 0.15s;
     }
 
-    .open-btn:hover { background: #c73652; }
+    .open-btn:hover { background: #e6d800; }
 
     .tip {
       margin-top: 8px;
       font-size: 10px;
-      color: #555;
+      color: #bbb;
       font-family: Arial, sans-serif;
       text-align: center;
     }
@@ -175,7 +178,7 @@
     <div class="logo">
       <div class="logo-icon">🔍</div>
       <div>
-        <div class="logo-text">Spanish<span>Lens</span></div>
+        <div class="logo-text">Click<span>tionary</span></div>
       </div>
     </div>
     <div class="subtitle">Highlight any Spanish text to get definitions</div>

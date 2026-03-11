@@ -1,4 +1,4 @@
-// SpanishLens Content Script
+// Clicktionary Content Script
 // Detects highlighted Spanish text, fetches definitions, shows tooltip
 
 let tooltip = null;
@@ -7,7 +7,7 @@ let hideTimeout = null;
 // ── Create tooltip element ──────────────────────────────────────────────────
 function createTooltip() {
   const el = document.createElement('div');
-  el.id = 'spanishlens-tooltip';
+  el.id = 'clicktionary-tooltip';
   el.innerHTML = `
     <div class="sl-header">
       <span class="sl-word"></span>
@@ -122,7 +122,7 @@ let lastDefinition = null;
 
 document.addEventListener('mouseup', async (e) => {
   // Don't trigger inside our own tooltip
-  if (e.target.closest('#spanishlens-tooltip')) return;
+  if (e.target.closest('#clicktionary-tooltip')) return;
 
   const selection = window.getSelection();
   const text = selection?.toString().trim();
@@ -197,7 +197,7 @@ async function addToWordBank() {
 
 // ── Close on outside click ──────────────────────────────────────────────────
 document.addEventListener('mousedown', (e) => {
-  if (tooltip && !e.target.closest('#spanishlens-tooltip')) {
+  if (tooltip && !e.target.closest('#clicktionary-tooltip')) {
     hideTimeout = setTimeout(hideTooltip, 150);
   }
 });
