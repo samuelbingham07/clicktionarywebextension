@@ -1,14 +1,12 @@
 // Clicktionary Bridge Content Script
 // Injected into the hosted website to pass chrome.storage data to the page
 
-console.log('Clicktionary: bridge.js injected ✓');
 
 // Listen for requests from the website
 window.addEventListener('message', async (event) => {
   if (event.source !== window) return;
   if (!event.data?.type?.startsWith('CLICKTIONARY_')) return;
 
-  console.log('Clicktionary bridge received:', event.data.type);
 
   const { type, payload } = event.data;
 
@@ -49,6 +47,4 @@ window.addEventListener('message', async (event) => {
 });
 
 // Signal to the page that the extension bridge is ready
-console.log('Clicktionary: sending BRIDGE_READY signal');
 window.postMessage({ type: 'CLICKTIONARY_BRIDGE_READY' }, '*');
-console.log('Clicktionary: BRIDGE_READY sent');
