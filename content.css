@@ -4,7 +4,7 @@
   position: absolute;
   z-index: 2147483647;
   width: 300px;
-  background: #fcedd0;
+  background: #ffffff;
   border: 1.5px solid #f0b400;
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(240, 180, 0, 0.3), 0 2px 8px rgba(0,0,0,0.12);
@@ -25,7 +25,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px 8px;
-  background: #fcedd0;
+  background: #fffde7;
   border-bottom: 1.5px solid #f0b400;
 }
 
@@ -72,7 +72,7 @@
 .ct-body {
   padding: 12px 14px 10px;
   min-height: 48px;
-  background: #fcedd0;
+  background: #ffffff;
 }
 
 .ct-loading {
@@ -119,7 +119,7 @@
 .ct-footer {
   padding: 8px 14px 12px;
   border-top: 1px solid #f0d9a0;
-  background: #fcedd0;
+  background: #ffffff;
   display: flex;
   align-items: center;
   gap: 8px;
