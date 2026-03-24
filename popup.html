@@ -46,6 +46,59 @@
 
     .logo-text span { color: #b8a000; }
 
+    /* ── Enable toggle ── */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .toggle-label {
+      font-size: 10px;
+      font-family: Arial, sans-serif;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+
+    .toggle-label.on { color: #b8a000; font-weight: 700; }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input { display: none; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #ddd;
+      border-radius: 20px;
+      transition: background 0.2s;
+    }
+
+    .toggle-switch input:checked + .toggle-track { background: #f5e642; }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      transition: transform 0.2s;
+    }
+
+    .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
     /* ── Auth Panel ── */
     #authPanel {
       padding: 20px 18px;
@@ -134,6 +187,38 @@
       cursor: pointer;
       text-decoration: underline;
     }
+
+    .google-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      padding: 9px;
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      font-weight: 600;
+      color: #3c4043;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      margin-bottom: 12px;
+    }
+
+    .google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+    .google-btn:disabled { opacity: 0.6; cursor: default; }
+
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .auth-divider-line { flex: 1; height: 1px; background: #e0e0e0; }
+    .auth-divider-text { font-size: 11px; color: #bbb; font-family: Arial, sans-serif; }
 
     /* ── Main Panel ── */
     #mainPanel { display: none; }
@@ -289,9 +374,164 @@
       font-family: Arial, sans-serif;
       font-size: 12px;
     }
-      padding: 10px 18px 14px;
+
+    .lang-section {
+      padding: 0;
       border-top: 1px solid #f5f0c0;
     }
+
+    .lang-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 18px;
+    }
+
+    .lang-current {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .lang-current .flag { font-size: 15px; }
+    .lang-current .name { font-weight: 600; color: #333; }
+
+    .lang-change-btn {
+      font-size: 11px;
+      color: #b8a000;
+      font-family: Arial, sans-serif;
+      background: none;
+      border: 1px solid #e6d800;
+      border-radius: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .lang-change-btn:hover { background: #fffde7; }
+
+    .lang-picker {
+      padding: 8px 18px 12px;
+      border-top: 1px solid #f5f0c0;
+      background: #fffde7;
+    }
+
+    .custom-lang-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .custom-lang-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1.5px solid transparent;
+      background: #f9f9f9;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      transition: all 0.15s;
+    }
+
+    .custom-lang-item:hover { background: #fff9e0; border-color: #f5e642; }
+    .custom-lang-item.active { background: #fff9e0; border-color: #f5e642; color: #b8a000; }
+
+    .new-wordbank-btn {
+      width: 100%;
+      margin-top: 8px;
+      background: none;
+      border: 1px dashed #ccc;
+      border-radius: 6px;
+      padding: 6px;
+      font-size: 11px;
+      font-family: Arial, sans-serif;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .new-wordbank-btn:hover { border-color: #b8a000; color: #b8a000; background: #fffde7; }
+
+    .new-wordbank-form {
+      margin-top: 8px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .new-wordbank-form .auth-input { margin-bottom: 0; flex: 1; font-size: 11px; }
+    .new-wordbank-form .auth-btn { width: auto; margin-bottom: 0; padding: 8px 12px; font-size: 12px; }
+
+    /* ── Add Word Section ── */
+    .add-word-section {
+      padding: 0 18px 12px;
+      border-bottom: 1px solid #f5f0c0;
+    }
+
+    .add-word-toggle {
+      width: 100%;
+      background: none;
+      border: 1px dashed #ccc;
+      border-radius: 6px;
+      padding: 7px;
+      font-size: 11px;
+      font-family: Arial, sans-serif;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .add-word-toggle:hover { border-color: #b8a000; color: #b8a000; background: #fffde7; }
+
+    .add-word-form {
+      margin-top: 8px;
+    }
+
+    .add-word-row {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+      align-items: center;
+    }
+
+    .add-word-row .auth-input { margin-bottom: 0; flex: 1; font-size: 11px; }
+
+    .translate-btn {
+      flex-shrink: 0;
+      background: #f5f0c0;
+      border: 1px solid #e6d800;
+      border-radius: 6px;
+      padding: 8px 6px;
+      font-size: 10px;
+      font-family: Arial, sans-serif;
+      font-weight: 700;
+      color: #b8a000;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      min-width: 38px;
+      text-align: center;
+    }
+
+    .translate-btn:hover { background: #f5e642; }
+    .translate-btn:disabled { opacity: 0.5; cursor: default; }
+
+    .add-word-msg {
+      font-size: 11px;
+      font-family: Arial, sans-serif;
+      margin-top: 4px;
+      text-align: center;
+      min-height: 16px;
+    }
+
+    .add-word-msg.success { color: #4caf50; }
+    .add-word-msg.error { color: #e53935; }
 
     .lang-label {
       font-size: 10px;
@@ -338,6 +578,14 @@
         <div class="logo-text">Click<span>tionary</span></div>
       </div>
     </div>
+    <div class="toggle-wrap">
+      <span class="toggle-label" id="toggleLabel">Off</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="enableToggle" />
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
   </div>
 
   <!-- Loading state -->
@@ -349,6 +597,20 @@
     <div class="auth-sub">Your word bank syncs across all your devices</div>
     <div class="auth-error" id="authError"></div>
     <div class="auth-success" id="authSuccess"></div>
+    <button class="google-btn" id="googleSignInBtn">
+      <svg width="16" height="16" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="auth-divider">
+      <div class="auth-divider-line"></div>
+      <span class="auth-divider-text">or</span>
+      <div class="auth-divider-line"></div>
+    </div>
     <input class="auth-input" id="emailInput" type="email" placeholder="Email" />
     <input class="auth-input" id="passwordInput" type="password" placeholder="Password" />
     <button class="auth-btn" id="authSubmit">Sign In</button>
@@ -383,14 +645,45 @@
       </div>
     </div>
 
+    <div class="add-word-section">
+      <button class="add-word-toggle" id="addWordToggle">＋ Add word manually</button>
+      <div class="add-word-form" id="addWordForm" style="display:none">
+        <div class="add-word-row">
+          <input class="auth-input" id="addWordTarget" placeholder="Word in target language…" />
+          <button class="translate-btn" id="translateToEn" title="Translate to English">→ EN</button>
+        </div>
+        <div class="add-word-row">
+          <input class="auth-input" id="addWordEnglish" placeholder="English translation…" />
+          <button class="translate-btn" id="translateFromEn" title="Translate to target language">→</button>
+        </div>
+        <button class="auth-btn" id="addWordSave">Add to Wordbank</button>
+        <div class="add-word-msg" id="addWordMsg"></div>
+      </div>
+    </div>
+
     <div class="lang-section">
-      <div class="lang-label">Learning Language</div>
-      <div class="lang-grid" id="langGrid"></div>
+      <div class="lang-bar">
+        <div class="lang-current">
+          <span class="flag" id="langFlag">🌐</span>
+          <span class="name" id="langName">Loading…</span>
+        </div>
+        <button class="lang-change-btn" id="langChangeBtn">Change ▾</button>
+      </div>
+      <div class="lang-picker" id="langPicker" style="display:none">
+        <div class="lang-label">Built-in languages</div>
+        <div class="lang-grid" id="langGrid"></div>
+        <div class="custom-lang-list" id="customLangList"></div>
+        <button class="new-wordbank-btn" id="newWordBankBtn">＋ New custom wordbank</button>
+        <div class="new-wordbank-form" id="newWordBankForm" style="display:none">
+          <input class="auth-input" id="newWordBankInput" placeholder='Name, e.g. "Travel Italian"' />
+          <button class="auth-btn" id="newWordBankSave">Create</button>
+        </div>
+      </div>
     </div>
 
     <div class="footer">
       <button class="open-btn" id="openWordBank">Open Word Bank & Practice →</button>
-      <div class="tip">Highlight Spanish text on any webpage to save words</div>
+      <div class="tip" id="saveTip">Highlight text on any webpage to save words</div>
     </div>
   </div>
 

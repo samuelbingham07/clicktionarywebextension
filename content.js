@@ -11,7 +11,12 @@ const LANGUAGE_NAMES = {
   ko: 'Korean', ar: 'Arabic'
 };
 
-// Load selected language from extension storage
+let extensionEnabled = true; // default on
+
+// Load initial state
+chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, (res) => {
+  if (res) extensionEnabled = res.enabled;
+});
 chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, (res) => {
   if (res?.language) currentLanguage = res.language;
 });
@@ -81,25 +86,60 @@ function hideTooltip() {
   if (tooltip) tooltip.style.display = 'none';
 }
 
-// ── Fetch translation via MyMemory ──────────────────────────────────────────
+// ── Translation helpers ──────────────────────────────────────────────────────
+
+// Lingva Translate: Google Translate quality, free, no API key
+const LINGVA_INSTANCES = [
+  'https://lingva.ml',
+  'https://translate.plausibility.cloud',
+];
+
+const MYMEMORY_CODES = { zh: 'zh-CN' };
+
+async function fetchWithTimeout(url, ms = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (e) {
+    clearTimeout(id);
+    throw e;
+  }
+}
+
+// ── Fetch translation (Lingva primary, MyMemory fallback) ───────────────────
 async function fetchDefinition(word, langCode) {
   const clean = word.trim();
 
-  // Try MyMemory translation API
+  // 1. Try Lingva Translate instances
+  for (const base of LINGVA_INSTANCES) {
+    try {
+      const res = await fetchWithTimeout(
+        `${base}/api/v1/${langCode}/en/${encodeURIComponent(clean)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const translation = data?.translation;
+        if (translation && translation.toLowerCase() !== clean.toLowerCase()) {
+          return { word: clean, pos: '', definition: translation, example: '' };
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Fallback: MyMemory
   try {
-    const res = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${langCode}|en`
+    const mmCode = MYMEMORY_CODES[langCode] || langCode;
+    const res = await fetchWithTimeout(
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${mmCode}|en`
     );
     if (res.ok) {
       const data = await res.json();
       const translation = data?.responseData?.translatedText;
       if (translation && translation.toLowerCase() !== clean.toLowerCase()) {
-        return {
-          word: clean,
-          pos: '',
-          definition: translation,
-          example: '',
-        };
+        return { word: clean, pos: '', definition: translation, example: '' };
       }
     }
   } catch (_) {}
@@ -126,7 +166,15 @@ let lastDefinition = null;
 document.addEventListener('mouseup', async (e) => {
   if (e.target.closest('#clicktionary-tooltip')) return;
 
-  // Refresh language on each lookup in case user changed it
+  // Check enabled state first — all logic runs inside the callback so the check is never stale
+  chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, (res) => {
+    if (res) extensionEnabled = res.enabled;
+    if (!extensionEnabled) return;
+    handleSelection(e);
+  });
+});
+
+async function handleSelection(e) {
   chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, (res) => {
     if (res?.language) currentLanguage = res.language;
   });
@@ -174,7 +222,7 @@ document.addEventListener('mouseup', async (e) => {
   } else {
     t.querySelector('.ct-error').style.display = 'block';
   }
-});
+}
 
 // ── Add to Word Bank ────────────────────────────────────────────────────────
 async function addToWordBank() {

@@ -4,6 +4,101 @@
 const SUPABASE_URL = 'https://incvqtbkfntzdvbingqv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3ZxdGJrZm50emR2YmluZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMTc3NzAsImV4cCI6MjA4OTg5Mzc3MH0.QCIoHwvt41QcLJ3ilSezTntNGzXyFFpHQf-7kz6mKzU';
 
+// ── Google OAuth ───────────────────────────────────────────────────────────────
+// SETUP REQUIRED:
+//   1. Google Cloud Console → APIs & Services → Credentials
+//      → Create OAuth 2.0 Client ID → Web application
+//      → Authorized redirect URIs: https://<your-extension-id>.chromiumapp.org/
+//   2. Supabase Dashboard → Authentication → Providers → Google → Enable
+//      → Paste the same Client ID + Client Secret
+//   3. Replace the placeholder below with your actual Client ID
+const GOOGLE_CLIENT_ID = '534128476683-9j6vsej1ree0pb431vl9kmd6ajkvr4qu.apps.googleusercontent.com';
+
+function generateNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256hex(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function signInWithGoogle() {
+  if (GOOGLE_CLIENT_ID.startsWith('REPLACE_WITH')) {
+    return { success: false, error: 'Google Client ID not configured. See background.js for setup instructions.' };
+  }
+
+  const nonce = generateNonce();
+  const hashedNonce = await sha256hex(nonce);
+  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
+
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set('response_type', 'token id_token');
+  authUrl.searchParams.set('redirect_uri', redirectUri);
+  authUrl.searchParams.set('scope', 'openid email profile');
+  authUrl.searchParams.set('nonce', hashedNonce); // Google encodes the hash; Supabase verifies with raw nonce
+  authUrl.searchParams.set('prompt', 'select_account');
+
+  return new Promise((resolve) => {
+    chrome.identity.launchWebAuthFlow(
+      { url: authUrl.toString(), interactive: true },
+      async (redirectUrl) => {
+        if (chrome.runtime.lastError || !redirectUrl) {
+          const error = chrome.runtime.lastError?.message || 'Sign-in cancelled';
+          await chrome.storage.local.set({ googleAuthError: error });
+          resolve({ success: false, error });
+          return;
+        }
+        try {
+          const hash = new URL(redirectUrl).hash.substring(1);
+          const params = new URLSearchParams(hash);
+          const idToken = params.get('id_token');
+          const accessToken = params.get('access_token');
+
+          if (!idToken) {
+            resolve({ success: false, error: 'No id_token received from Google.' });
+            return;
+          }
+
+          // Exchange with Supabase using id_token grant
+          const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=id_token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY
+            },
+            body: JSON.stringify({
+              provider: 'google',
+              id_token: idToken,
+              access_token: accessToken,
+              nonce: nonce  // raw (unhashed) nonce — Supabase hashes it to verify
+            })
+          });
+
+          const data = await res.json();
+          if (data.access_token) {
+            await chrome.storage.local.set({ supabase_session: data });
+            await chrome.storage.local.remove('googleAuthError');
+            // Re-open the popup (it likely closed when the auth window opened)
+            try { chrome.action.openPopup(); } catch (_) {}
+            resolve({ success: true, user: data.user });
+          } else {
+            const error = data.error_description || data.msg || 'Google sign-in failed. Make sure Google is enabled in your Supabase dashboard.';
+            await chrome.storage.local.set({ googleAuthError: error });
+            resolve({ success: false, error });
+          }
+        } catch (e) {
+          resolve({ success: false, error: e.message });
+        }
+      }
+    );
+  });
+}
+
 // ── Supabase helpers ──────────────────────────────────────────────────────────
 
 async function getSession() {
@@ -207,6 +302,10 @@ async function updateWord(id, updates) {
 // ── Message handler ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'SIGN_IN_GOOGLE') {
+    signInWithGoogle().then(sendResponse);
+    return true;
+  }
   if (message.type === 'SIGN_IN') {
     signInWithEmail(message.email, message.password).then(sendResponse);
     return true;
@@ -223,6 +322,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     getSession().then(session => sendResponse({ session }));
     return true;
   }
+  if (message.type === 'GET_ENABLED') {
+    chrome.storage.local.get('extensionEnabled', (r) => {
+      // Default to enabled (true) if never set
+      sendResponse({ enabled: r.extensionEnabled !== false });
+    });
+    return true;
+  }
+  if (message.type === 'SET_ENABLED') {
+    chrome.storage.local.set({ extensionEnabled: message.enabled }, () => {
+      sendResponse({ success: true });
+    });
+    return true;
+  }
   if (message.type === 'GET_LANGUAGE') {
     chrome.storage.local.get('selectedLanguage', (r) => {
       sendResponse({ language: r.selectedLanguage || 'es' });
@@ -232,6 +344,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SET_LANGUAGE') {
     chrome.storage.local.set({ selectedLanguage: message.language }, () => {
       sendResponse({ success: true });
+    });
+    return true;
+  }
+  if (message.type === 'GET_CUSTOM_LANGUAGES') {
+    chrome.storage.local.get('customLanguages', (r) => {
+      sendResponse({ customLanguages: r.customLanguages || [] });
+    });
+    return true;
+  }
+  if (message.type === 'ADD_CUSTOM_LANGUAGE') {
+    chrome.storage.local.get('customLanguages', (r) => {
+      const existing = r.customLanguages || [];
+      const code = `custom_${Date.now()}`;
+      const newLang = { code, name: message.name, flag: '📝' };
+      existing.push(newLang);
+      chrome.storage.local.set({ customLanguages: existing }, () => {
+        sendResponse({ code, language: newLang });
+      });
     });
     return true;
   }
