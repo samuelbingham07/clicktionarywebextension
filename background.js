@@ -126,21 +126,38 @@ async function addWord(entry) {
     );
     if (existing && existing.length > 0) return true;
 
-    const result = await supabaseFetch('/words', {
+    // Get user id from session
+    const userId = session.user?.id;
+    if (!userId) {
+      console.error('Clicktionary: no user id in session');
+      return false;
+    }
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
       method: 'POST',
-      headers: { 'Prefer': 'return=minimal' },
+      headers: {
+        ...(await getAuthHeaders()),
+        'Prefer': 'return=minimal'
+      },
       body: JSON.stringify({
+        user_id: userId,
         spanish: entry.spanish.toLowerCase(),
-        english: entry.english,
-        pos: entry.pos,
+        english: entry.english || '',
+        pos: entry.pos || '',
         strength: 0,
         added_at: new Date().toISOString()
       })
     });
-    return result !== null;
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('Clicktionary: failed to save word:', res.status, err);
+      return false;
+    }
+    return true;
   }
 
-  // Fallback: local storage
+  // Fallback: local storage if not signed in
   try {
     const local = await chrome.storage.local.get('wordBank');
     const words = local.wordBank || [];
@@ -150,6 +167,7 @@ async function addWord(entry) {
     await chrome.storage.local.set({ wordBank: words });
     return true;
   } catch (e) {
+    console.error('Clicktionary: local storage fallback failed', e);
     return false;
   }
 }
