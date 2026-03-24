@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clicktionary — Word Bank</title>
+  <link rel="icon" type="image/png" href="logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -11,10 +12,10 @@
       --bg: #f9f9f9;
       --surface: #fffde7;
       --surface2: #fff9c4;
-      --accent: #f5e642;
+      --accent: #f0b400;
       --accent2: #ffe082;
       --text: #222222;
-      --muted: #888888;
+      --muted: #764c0f;
       --border: rgba(0,0,0,0.1);
       --green: #4caf50;
     }
@@ -59,11 +60,11 @@
       font-family: 'Playfair Display', serif;
       font-size: 22px;
       font-weight: 900;
-      color: #222222;
+      color: #ffffff;
       letter-spacing: -0.02em;
     }
 
-    .nav-logo span { color: #f5e642; }
+    .nav-logo span { color: #f0b400; }
 
     .nav-tabs {
       display: flex;
@@ -79,7 +80,7 @@
       border-radius: 7px;
       border: none;
       background: none;
-      color: #888888;
+      color: #764c0f;
       font-family: 'DM Sans', sans-serif;
       font-size: 14px;
       font-weight: 500;
@@ -88,15 +89,15 @@
     }
 
     .nav-tab.active {
-      background: #f5e642;
-      color: #fff;
+      background: #f0b400;
+      color: #764c0f;
     }
 
     .nav-tab:hover:not(.active) { color: #222222; }
 
     .nav-count {
       font-size: 13px;
-      color: #888888;
+      color: #764c0f;
       font-weight: 500;
     }
 
@@ -118,7 +119,7 @@
     }
 
     .hero-title em {
-      color: #f5e642;
+      color: #f0b400;
       font-style: italic;
     }
 
@@ -141,12 +142,12 @@
       font-family: 'Playfair Display', serif;
       font-size: 32px;
       font-weight: 700;
-      color: #f5e642;
+      color: #f0b400;
     }
 
     .stat-card .lbl {
       font-size: 11px;
-      color: #888888;
+      color: #764c0f;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       margin-top: 2px;
@@ -180,22 +181,22 @@
       transition: border-color 0.2s;
     }
 
-    .search-box:focus { border-color: #f5e642; }
-    .search-box::placeholder { color: #888888; }
+    .search-box:focus { border-color: #f0b400; }
+    .search-box::placeholder { color: #764c0f; }
 
     .filter-btn {
       padding: 10px 18px;
       border-radius: 8px;
       border: 1px solid rgba(0,0,0,0.1);
       background: #fffde7;
-      color: #888888;
+      color: #764c0f;
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
       cursor: pointer;
       transition: all 0.15s;
     }
 
-    .filter-btn.active { border-color: #f5e642; color: #f5e642; }
+    .filter-btn.active { border-color: #f0b400; color: #f0b400; }
     .filter-btn:hover:not(.active) { color: #222222; }
 
     .word-grid {
@@ -238,7 +239,7 @@
     .card-delete {
       background: none;
       border: none;
-      color: #888888;
+      color: #764c0f;
       cursor: pointer;
       font-size: 14px;
       padding: 2px 4px;
@@ -248,19 +249,19 @@
     }
 
     .word-card:hover .card-delete { opacity: 1; }
-    .card-delete:hover { color: #f5e642; }
+    .card-delete:hover { color: #f0b400; }
 
     .card-pos {
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #f5e642;
+      color: #f0b400;
       margin-bottom: 4px;
     }
 
     .card-en {
       font-size: 13px;
-      color: #888888;
+      color: #764c0f;
       line-height: 1.4;
     }
 
@@ -291,7 +292,7 @@
 
     .card-date {
       font-size: 10px;
-      color: #888888;
+      color: #764c0f;
     }
 
     /* ── Practice View ── */
@@ -327,14 +328,14 @@
       border-radius: 5px;
       border: none;
       background: none;
-      color: #888888;
+      color: #764c0f;
       font-family: 'DM Sans', sans-serif;
       font-size: 12px;
       cursor: pointer;
       transition: all 0.15s;
     }
 
-    .mode-btn.active { background: #fff9c4; color: #222222; }
+    .mode-btn.active { background: #fffde7; color: #764c0f; }
 
     /* Flashcard */
     .flashcard-scene {
@@ -375,7 +376,7 @@
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.1em;
-      color: #888888;
+      color: #764c0f;
       margin-bottom: 16px;
     }
 
@@ -389,11 +390,11 @@
 
     .card-face .hint {
       font-size: 12px;
-      color: #888888;
+      color: #764c0f;
       margin-top: 12px;
     }
 
-    .card-back .main-word { color: #f5e642; }
+    .card-back .main-word { color: #f0b400; }
 
     .card-controls {
       display: flex;
@@ -420,7 +421,7 @@
     }
 
     .ctrl-btn .icon { font-size: 22px; }
-    .ctrl-btn.wrong:hover { border-color: #f5e642; background: rgba(233,69,96,0.1); }
+    .ctrl-btn.wrong:hover { border-color: #f0b400; background: rgba(233,69,96,0.1); }
     .ctrl-btn.hard:hover { border-color: #ffe082; background: rgba(245,166,35,0.1); }
     .ctrl-btn.correct:hover { border-color: #4caf50; background: rgba(78,203,113,0.1); }
 
@@ -434,7 +435,7 @@
 
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #f5e642, #ffe082);
+      background: linear-gradient(90deg, #f0b400, #f5c800);
       border-radius: 99px;
       transition: width 0.4s ease;
     }
@@ -442,7 +443,7 @@
     .progress-label {
       text-align: center;
       font-size: 12px;
-      color: #888888;
+      color: #764c0f;
       margin-bottom: 32px;
     }
 
@@ -480,20 +481,111 @@
       line-height: 1.3;
     }
 
-    .mc-opt:hover:not(:disabled) { border-color: #f5e642; }
+    .mc-opt:hover:not(:disabled) { border-color: #f0b400; }
     .mc-opt.correct { border-color: #4caf50 !important; background: rgba(78,203,113,0.12) !important; color: #4caf50; }
-    .mc-opt.wrong { border-color: #f5e642 !important; background: rgba(233,69,96,0.12) !important; color: #f5e642; }
+    .mc-opt.wrong { border-color: #f0b400 !important; background: rgba(233,69,96,0.12) !important; color: #f0b400; }
 
     /* Empty states */
     .empty {
       text-align: center;
       padding: 80px 24px;
-      color: #888888;
+      color: #764c0f;
     }
 
     .empty-icon { font-size: 48px; margin-bottom: 16px; }
     .empty-title { font-family: 'Playfair Display', serif; font-size: 24px; color: #222222; margin-bottom: 8px; }
     .empty-sub { font-size: 14px; line-height: 1.6; }
+
+    /* ── Add Word ── */
+    .add-word-bar {
+      margin-bottom: 20px;
+    }
+
+    .add-word-toggle-btn {
+      background: none;
+      border: 1px dashed rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: #764c0f;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .add-word-toggle-btn:hover { border-color: #764c0f; background: #fffde7; }
+
+    .add-word-form-wrap {
+      margin-top: 12px;
+      background: #fffde7;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .add-word-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .add-word-field label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .add-word-input {
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #222222;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .add-word-input:focus { border-color: #f0b400; }
+    .add-word-input::placeholder { color: #764c0f; opacity: 0.5; }
+
+    .add-word-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .add-word-save-btn {
+      background: #f0b400;
+      color: #764c0f;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .add-word-save-btn:hover { background: #d4a000; }
+
+    .add-word-msg {
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      margin-top: 8px;
+    }
+    .add-word-msg.success { color: #4caf50; }
+    .add-word-msg.error { color: #e53935; }
 
     /* ── Responsive ── */
     @media (max-width: 700px) {
@@ -506,11 +598,11 @@
 </head>
 <body>
 <div class="app">
-  <div id="directVisitBanner" style="display:none; background:#fffde7; border-bottom:2px solid #f5e642; padding:12px 48px; font-family:'DM Sans',sans-serif; font-size:13px; color:#555; text-align:center;">
+  <div id="directVisitBanner" style="display:none; background:#fffde7; border-bottom:2px solid #f0b400; padding:12px 48px; font-family:'DM Sans',sans-serif; font-size:13px; color:#555; text-align:center;">
     ⚠️ <strong>Sign in via the Clicktionary extension</strong> — click the extension icon, sign in, then press "Open Word Bank & Practice".
   </div>
   <nav>
-    <div class="nav-logo">Spanish<span>Lens</span></div>
+    <div class="nav-logo">Click<span>tionary</span></div>
     <div class="nav-tabs">
       <button class="nav-tab active" data-view="bank">Word Bank</button>
       <button class="nav-tab" data-view="practice">Practice</button>
@@ -557,6 +649,25 @@
           <option value="ko">🇰🇷 Korean</option>
           <option value="ar">🇸🇦 Arabic</option>
         </select>
+      </div>
+      <div class="add-word-bar">
+        <button class="add-word-toggle-btn" id="addWordToggle">＋ Add word manually</button>
+        <div id="addWordFormWrap" style="display:none">
+          <div class="add-word-form-wrap">
+            <div class="add-word-field">
+              <label>Word / phrase</label>
+              <input class="add-word-input" id="addTargetInput" placeholder="e.g. vainilla" />
+            </div>
+            <div class="add-word-field">
+              <label>English</label>
+              <input class="add-word-input" id="addEnglishInput" placeholder="e.g. vanilla" />
+            </div>
+            <div class="add-word-actions">
+              <button class="add-word-save-btn" id="addWordSaveBtn">Add to Word Bank</button>
+            </div>
+          </div>
+          <div class="add-word-msg" id="addWordMsg"></div>
+        </div>
       </div>
       <div class="word-grid" id="wordGrid"></div>
     </div>
@@ -738,7 +849,7 @@ function renderWordGrid() {
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
-          ${w.language && LANGUAGES[w.language] ? `<div style="font-size:10px;color:#888;font-family:Arial,sans-serif">${LANGUAGES[w.language].flag} ${LANGUAGES[w.language].name}</div>` : ''}
+          ${w.language && LANGUAGES[w.language] ? `<div style="font-size:10px;color:#764c0f;font-family:Arial,sans-serif">${LANGUAGES[w.language].flag} ${LANGUAGES[w.language].name}</div>` : ''}
         </div>
         <div class="card-en">${w.english || '—'}</div>
         <div class="card-footer">
@@ -784,7 +895,7 @@ function renderPractice() {
       <div class="empty-icon">🎉</div>
       <div class="empty-title">Round complete!</div>
       <div class="empty-sub">You reviewed all ${practiceQueue.length} words.</div>
-      <button onclick="startPractice()" style="margin-top:20px;padding:12px 32px;background:#f5e642;color:#333;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#e6d800'" onmouseout="this.style.background='#f5e642'">Practice Again</button>
+      <button onclick="startPractice()" style="margin-top:20px;padding:12px 32px;background:#f0b400;color:#764c0f;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#d4a000'" onmouseout="this.style.background='#f0b400'">Practice Again</button>
     </div>`;
     return;
   }
@@ -910,6 +1021,87 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
     practiceMode = btn.dataset.mode;
     startPractice();
   });
+});
+
+// ── Add Word Manually ─────────────────────────────────────────────────────────
+document.getElementById('addWordToggle').addEventListener('click', () => {
+  const wrap = document.getElementById('addWordFormWrap');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? 'block' : 'none';
+  document.getElementById('addWordToggle').textContent = open ? '✕ Cancel' : '＋ Add word manually';
+  if (open) document.getElementById('addTargetInput').focus();
+});
+
+async function translateText(text, from, to) {
+  const encoded = encodeURIComponent(text.trim());
+  const instances = ['https://lingva.ml', 'https://translate.plausibility.cloud'];
+  const result = await Promise.any(
+    instances.map(base =>
+      fetch(`${base}/api/v1/${from}/${to}/${encoded}`, { signal: AbortSignal.timeout(2000) })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(d => {
+          if (!d?.translation || d.translation.toLowerCase() === text.toLowerCase()) return Promise.reject();
+          return d.translation;
+        })
+    )
+  ).catch(() => null);
+  if (result) return result;
+  // MyMemory fallback
+  try {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encoded}&langpair=${from}|${to}`, { signal: AbortSignal.timeout(2000) });
+    const d = await r.json();
+    const t = d?.responseData?.translatedText;
+    if (t && t.toLowerCase() !== text.trim().toLowerCase()) return t;
+  } catch (_) {}
+  return null;
+}
+
+document.getElementById('addWordSaveBtn').addEventListener('click', async () => {
+  const targetInput = document.getElementById('addTargetInput');
+  const englishInput = document.getElementById('addEnglishInput');
+  const msg = document.getElementById('addWordMsg');
+  const target = targetInput.value.trim();
+  const english = englishInput.value.trim();
+
+  if (!target && !english) { msg.className = 'add-word-msg error'; msg.textContent = 'Enter a word or translation.'; return; }
+
+  const btn = document.getElementById('addWordSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  msg.textContent = '';
+
+  let finalTarget = target;
+  let finalEnglish = english;
+
+  // Auto-translate missing field using the currently selected language
+  const langCode = document.getElementById('langFilter').value === 'all' ? 'es' : document.getElementById('langFilter').value;
+  if (finalTarget && !finalEnglish) {
+    finalEnglish = await translateText(finalTarget, langCode, 'en') || '';
+  } else if (!finalTarget && finalEnglish) {
+    finalTarget = await translateText(finalEnglish, 'en', langCode) || finalEnglish;
+  }
+
+  if (!authToken) { msg.className = 'add-word-msg error'; msg.textContent = 'Sign in via the extension first.'; btn.disabled = false; btn.textContent = 'Add to Word Bank'; return; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
+      method: 'POST',
+      headers: { ...supabaseHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ spanish: finalTarget.toLowerCase(), english: finalEnglish, pos: '', strength: 0, language: langCode, added_at: new Date().toISOString() })
+    });
+    if (res.ok || res.status === 201) {
+      msg.className = 'add-word-msg success'; msg.textContent = '✓ Saved!';
+      targetInput.value = ''; englishInput.value = '';
+      allWords = await Store.getWords();
+      renderStats(); renderWordGrid();
+      setTimeout(() => { msg.textContent = ''; }, 2000);
+    } else {
+      msg.className = 'add-word-msg error'; msg.textContent = 'Failed to save. Try again.';
+    }
+  } catch (e) {
+    msg.className = 'add-word-msg error'; msg.textContent = 'Network error.';
+  }
+  btn.disabled = false; btn.textContent = 'Add to Word Bank';
 });
 
 init();
