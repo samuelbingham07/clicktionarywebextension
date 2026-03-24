@@ -12,20 +12,18 @@ const LANGUAGE_NAMES = {
 };
 
 // ── Keep local state in sync with storage ───────────────────────────────────
-// isEnabled mirrors storage so the mouseup check is always synchronous
-let isEnabled = true; // default on until storage is read
+let extensionOff = false; // default: extension is ON
 
-chrome.storage.local.get(['extensionEnabled', 'selectedLanguage'], (r) => {
-  // extensionEnabled=true in storage means the user toggled Off (inverted semantics)
-  isEnabled = r.extensionEnabled !== true;
+chrome.storage.local.get(['extensionOff', 'selectedLanguage'], (r) => {
+  extensionOff = !!r.extensionOff;
   if (r.selectedLanguage) currentLanguage = r.selectedLanguage;
 });
 
 // Stay in sync whenever popup changes the toggle or language
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if ('extensionEnabled' in changes) {
-    isEnabled = changes.extensionEnabled.newValue !== true;
+  if ('extensionOff' in changes) {
+    extensionOff = !!changes.extensionOff.newValue;
   }
   if ('selectedLanguage' in changes) {
     currentLanguage = changes.selectedLanguage.newValue;
@@ -183,8 +181,8 @@ document.addEventListener('mouseup', (e) => {
   clearTimeout(hideTimeout);
   const myId = ++requestId;
 
-  // Check isEnabled synchronously — no async, no latency
-  if (!isEnabled) {
+  // Check extensionOff synchronously — no async, no latency
+  if (extensionOff) {
     hideTooltip();
     return;
   }

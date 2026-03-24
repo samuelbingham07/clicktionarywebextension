@@ -81,14 +81,14 @@ async function translate(text, fromLang, toLang) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   // ── Enable/disable toggle (works regardless of sign-in state) ──
-  chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, ({ enabled }) => {
-    setToggleUI(!enabled); // stored true = Off, so invert for visual
+  chrome.storage.local.get('extensionOff', (r) => {
+    setToggleUI(!r.extensionOff);
   });
 
   document.getElementById('enableToggle').addEventListener('change', (e) => {
-    const visualOn = e.target.checked;
-    chrome.runtime.sendMessage({ type: 'SET_ENABLED', enabled: !visualOn }); // store inverse
-    setToggleUI(visualOn);
+    const on = e.target.checked;
+    chrome.storage.local.set({ extensionOff: !on });
+    setToggleUI(on);
   });
 
   // Check for a Google auth error stored while the popup was closed
