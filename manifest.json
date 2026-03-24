@@ -1,6 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clicktionary",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8ujCq+d6qbxbYM0utTdPxOp1iRVdpVxHBje0a22DmtIWOcF5h5KKBc17Qvok8c6tEo5XGm3Mlvt5UMmZkhVHZSfN7njik0hXT5kAMLNXGrrx0HjqBZSl14AswO3n4aa43KTMx82IUZDFgEgu6rwBONTo7yIcG7n2yKjiuAKM6RzzmsjFu8OixurOImEdpMJyGoo4VPfhR6kSmpUNRCKM5ApjthcUs4TJcgmoVFcqVyBo8CrLSdyQwnH4XN9YZahnLtwUtKYo86IT5eAqBphGZRBt1a66X2lqR7VH2gfkZ0ATOMl8soAJgff28eA7+fAY/mYFfRIc/HYSZSnpZzPgVwIDAQAB",
   "version": "1.0",
   "description": "Highlight any word in 10 languages to get instant translations and build your personal word bank. Practice with flashcards & quizzes",
   "permissions": [
