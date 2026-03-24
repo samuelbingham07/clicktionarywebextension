@@ -192,6 +192,7 @@ async function handleSelection(myId) {
   const text = selection?.toString().trim();
 
   if (!text || text.length < 1 || text.length > 100) {
+    clearTimeout(hideTimeout);
     hideTimeout = setTimeout(hideTooltip, 200);
     return;
   }
@@ -261,6 +262,7 @@ async function addToWordBank() {
 // ── Close on outside click ──────────────────────────────────────────────────
 document.addEventListener('mousedown', (e) => {
   if (tooltip && !e.target.closest('#clicktionary-tooltip')) {
+    clearTimeout(hideTimeout);
     hideTimeout = setTimeout(hideTooltip, 150);
   }
 });
