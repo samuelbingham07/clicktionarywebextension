@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clicktionary — Privacy Policy</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <style>
+    body {
+      max-width: 720px;
+      margin: 60px auto;
+      padding: 0 24px 80px;
+      font-family: Georgia, 'Times New Roman', serif;
+      color: #222;
+      background: #ffffff;
+      line-height: 1.7;
+    }
+    h1 { font-size: 32px; color: #764c0f; margin-bottom: 4px; }
+    h2 { font-size: 18px; color: #764c0f; margin-top: 36px; margin-bottom: 8px; }
+    p, li { font-size: 15px; color: #333; }
+    ul { padding-left: 20px; }
+    a { color: #f0b400; }
+    .updated { font-size: 13px; color: #888; margin-bottom: 32px; }
+    hr { border: none; border-top: 1px solid #f0d9a0; margin: 40px 0; }
+  </style>
+</head>
+<body>
+  <h1>Clicktionary</h1>
+  <div class="updated">Privacy Policy &mdash; Last updated: March 2026</div>
+
+  <p>Clicktionary is a browser extension and companion website that helps users learn vocabulary by highlighting words on any webpage to get instant translations and save them to a personal word bank. This policy explains what data we collect, how we use it, and your rights.</p>
+
+  <h2>1. Data We Collect</h2>
+  <ul>
+    <li><strong>Account information:</strong> If you sign in, we store your email address and a unique user ID provided by our authentication provider (Supabase/Google).</li>
+    <li><strong>Saved words:</strong> Words and phrases you add to your word bank, along with their translations, part of speech, the language they belong to, and your practice progress (strength score).</li>
+    <li><strong>Extension settings:</strong> Your selected language and on/off toggle state, stored locally in your browser using <code>chrome.storage.local</code>.</li>
+  </ul>
+  <p>We do <strong>not</strong> collect browsing history, the full text of pages you visit, or any data beyond the specific words you choose to save.</p>
+
+  <h2>2. How We Use Your Data</h2>
+  <ul>
+    <li>To sync your word bank across devices when you are signed in.</li>
+    <li>To power the Practice mode (flashcards and multiple choice) using your saved words.</li>
+    <li>To remember your language preference and toggle state between sessions.</li>
+  </ul>
+  <p>We do not sell, rent, or share your personal data with third parties for advertising or marketing purposes.</p>
+
+  <h2>3. Third-Party Services</h2>
+  <ul>
+    <li><strong>Supabase</strong> (<a href="https://supabase.com/privacy" target="_blank">privacy policy</a>) — used to store your account and word bank data securely.</li>
+    <li><strong>Google OAuth</strong> (<a href="https://policies.google.com/privacy" target="_blank">privacy policy</a>) — used optionally for sign-in. We only receive your email address and Google user ID.</li>
+    <li><strong>Lingva Translate / MyMemory</strong> — used to look up translations when you highlight text. Only the highlighted word or phrase is sent; no account data or page content is transmitted.</li>
+  </ul>
+
+  <h2>4. Data Storage and Security</h2>
+  <p>Your word bank is stored in a Supabase database secured with row-level security, meaning only you can access your own data. Authentication tokens are stored locally in your browser's extension storage and are never exposed to third-party websites.</p>
+
+  <h2>5. Data Deletion</h2>
+  <p>You can delete individual words at any time from the word bank view. To delete your account and all associated data, contact us at the email below and we will remove it within 30 days.</p>
+
+  <h2>6. Changes to This Policy</h2>
+  <p>We may update this policy occasionally. The "last updated" date at the top of this page will reflect any changes. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
+
+  <h2>7. Contact</h2>
+  <p>If you have any questions about this privacy policy or your data, please contact: <a href="mailto:samuelbingham07@gmail.com">samuelbingham07@gmail.com</a></p>
+
+  <hr>
+  <p style="font-size:13px;color:#888;">Clicktionary &mdash; <a href="/">Word Bank &amp; Practice</a></p>
+</body>
+</html>
