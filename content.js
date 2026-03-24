@@ -11,20 +11,13 @@ const LANGUAGE_NAMES = {
   ko: 'Korean', ar: 'Arabic'
 };
 
-// ── Keep local state in sync with storage ───────────────────────────────────
-let extensionOff = false; // default: extension is ON
-
-chrome.storage.local.get(['extensionOff', 'selectedLanguage'], (r) => {
-  extensionOff = !!r.extensionOff;
+// ── Keep language in sync with storage ──────────────────────────────────────
+chrome.storage.local.get('selectedLanguage', (r) => {
   if (r.selectedLanguage) currentLanguage = r.selectedLanguage;
 });
 
-// Stay in sync whenever popup changes the toggle or language
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if ('extensionOff' in changes) {
-    extensionOff = !!changes.extensionOff.newValue;
-  }
   if ('selectedLanguage' in changes) {
     currentLanguage = changes.selectedLanguage.newValue;
   }
@@ -181,16 +174,16 @@ document.addEventListener('mouseup', (e) => {
   clearTimeout(hideTimeout);
   const myId = ++requestId;
 
-  // Check extensionOff synchronously — no async, no latency
-  if (extensionOff) {
-    hideTooltip();
-    return;
-  }
-
-  // Debounce 50ms so the final mouseup of a double-click wins
+  // Debounce 50ms so the final mouseup of a double-click wins.
+  // Reading storage inside the timeout means the value is always fresh —
+  // no race condition if the user toggles off and highlights immediately.
   selectionDebounce = setTimeout(() => {
-    if (myId !== requestId) return; // another mouseup fired, bail
-    handleSelection(myId);
+    if (myId !== requestId) return;
+    chrome.storage.local.get('extensionOff', (r) => {
+      if (myId !== requestId) return;
+      if (r.extensionOff) { hideTooltip(); return; }
+      handleSelection(myId);
+    });
   }, 50);
 });
 
