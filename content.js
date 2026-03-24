@@ -11,7 +11,7 @@ const LANGUAGE_NAMES = {
   ko: 'Korean', ar: 'Arabic'
 };
 
-let extensionEnabled = true; // default on
+let extensionEnabled = false; // false = show tooltip (On)
 
 // Load initial state
 chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, (res) => {
@@ -169,7 +169,7 @@ document.addEventListener('mouseup', async (e) => {
   // Check enabled state first — all logic runs inside the callback so the check is never stale
   chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, (res) => {
     if (res) extensionEnabled = res.enabled;
-    if (!extensionEnabled) return;
+    if (extensionEnabled) return; // true = stored "off" → hide tooltip
     handleSelection(e);
   });
 });

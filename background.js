@@ -325,7 +325,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_ENABLED') {
     chrome.storage.local.get('extensionEnabled', (r) => {
       // Default to enabled (true) if never set
-      sendResponse({ enabled: r.extensionEnabled !== false });
+      sendResponse({ enabled: !!r.extensionEnabled });
     });
     return true;
   }
