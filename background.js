@@ -108,6 +108,7 @@ async function getWords() {
     english: row.english,
     pos: row.pos,
     strength: row.strength,
+    language: row.language || 'es',
     addedAt: row.added_at
   }));
 
@@ -145,6 +146,7 @@ async function addWord(entry) {
         english: entry.english || '',
         pos: entry.pos || '',
         strength: 0,
+        language: entry.language || 'es',
         added_at: new Date().toISOString()
       })
     });
@@ -219,6 +221,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.type === 'GET_SESSION') {
     getSession().then(session => sendResponse({ session }));
+    return true;
+  }
+  if (message.type === 'GET_LANGUAGE') {
+    chrome.storage.local.get('selectedLanguage', (r) => {
+      sendResponse({ language: r.selectedLanguage || 'es' });
+    });
+    return true;
+  }
+  if (message.type === 'SET_LANGUAGE') {
+    chrome.storage.local.set({ selectedLanguage: message.language }, () => {
+      sendResponse({ success: true });
+    });
     return true;
   }
   if (message.type === 'ADD_WORD') {

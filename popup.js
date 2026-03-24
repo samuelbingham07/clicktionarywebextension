@@ -4,6 +4,19 @@ const WORDBANK_URL = 'https://samuelbingham07.github.io/clicktionarywebextension
 const SUPABASE_URL = 'https://incvqtbkfntzdvbingqv.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3ZxdGJrZm50emR2YmluZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMTc3NzAsImV4cCI6MjA4OTg5Mzc3MH0.QCIoHwvt41QcLJ3ilSezTntNGzXyFFpHQf-7kz6mKzU';
 
+const LANGUAGES = [
+  { code: 'es', name: 'Spanish',    flag: '🇪🇸' },
+  { code: 'fr', name: 'French',     flag: '🇫🇷' },
+  { code: 'de', name: 'German',     flag: '🇩🇪' },
+  { code: 'it', name: 'Italian',    flag: '🇮🇹' },
+  { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
+  { code: 'ru', name: 'Russian',    flag: '🇷🇺' },
+  { code: 'zh', name: 'Chinese',    flag: '🇨🇳' },
+  { code: 'ja', name: 'Japanese',   flag: '🇯🇵' },
+  { code: 'ko', name: 'Korean',     flag: '🇰🇷' },
+  { code: 'ar', name: 'Arabic',     flag: '🇸🇦' },
+];
+
 let isSignUp = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -88,6 +101,27 @@ function clearMessages() {
 async function showMainPanel(user) {
   document.getElementById('mainPanel').style.display = 'block';
   document.getElementById('userEmail').textContent = user.email || '';
+
+  // ── Render language selector ──
+  chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, ({ language }) => {
+    const grid = document.getElementById('langGrid');
+    grid.innerHTML = LANGUAGES.map(l => `
+      <button class="lang-btn ${l.code === language ? 'active' : ''}" data-code="${l.code}" title="${l.name}">
+        <span class="flag">${l.flag}</span>
+        <span class="code">${l.code.toUpperCase()}</span>
+      </button>
+    `).join('');
+
+    grid.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const code = btn.dataset.code;
+        chrome.runtime.sendMessage({ type: 'SET_LANGUAGE', language: code }, () => {
+          grid.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+    });
+  });
 
   // Load words
   chrome.runtime.sendMessage({ type: 'GET_WORDS' }, ({ words }) => {

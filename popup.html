@@ -289,6 +289,45 @@
       font-family: Arial, sans-serif;
       font-size: 12px;
     }
+      padding: 10px 18px 14px;
+      border-top: 1px solid #f5f0c0;
+    }
+
+    .lang-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #aaa;
+      font-family: Arial, sans-serif;
+      margin-bottom: 8px;
+    }
+
+    .lang-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+
+    .lang-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 2px;
+      border-radius: 6px;
+      border: 1.5px solid transparent;
+      background: #f9f9f9;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: Arial, sans-serif;
+    }
+
+    .lang-btn .flag { font-size: 16px; }
+    .lang-btn .code { font-size: 9px; color: #888; font-weight: 600; letter-spacing: 0.05em; }
+
+    .lang-btn:hover { background: #fffde7; border-color: #f5e642; }
+    .lang-btn.active { background: #fffde7; border-color: #f5e642; }
+    .lang-btn.active .code { color: #b8a000; }
   </style>
 </head>
 <body>
@@ -342,6 +381,11 @@
       <div class="word-list" id="wordList">
         <div class="empty-state">No words yet — highlight some Spanish text!</div>
       </div>
+    </div>
+
+    <div class="lang-section">
+      <div class="lang-label">Learning Language</div>
+      <div class="lang-grid" id="langGrid"></div>
     </div>
 
     <div class="footer">

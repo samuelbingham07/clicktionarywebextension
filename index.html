@@ -544,6 +544,19 @@
         <button class="filter-btn active" data-filter="all">All</button>
         <button class="filter-btn" data-filter="learning">Learning</button>
         <button class="filter-btn" data-filter="mastered">Mastered</button>
+        <select id="langFilter" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:#fffde7;font-family:'DM Sans',sans-serif;font-size:13px;color:#222;cursor:pointer;outline:none">
+          <option value="all">All Languages</option>
+          <option value="es">🇪🇸 Spanish</option>
+          <option value="fr">🇫🇷 French</option>
+          <option value="de">🇩🇪 German</option>
+          <option value="it">🇮🇹 Italian</option>
+          <option value="pt">🇵🇹 Portuguese</option>
+          <option value="ru">🇷🇺 Russian</option>
+          <option value="zh">🇨🇳 Chinese</option>
+          <option value="ja">🇯🇵 Japanese</option>
+          <option value="ko">🇰🇷 Korean</option>
+          <option value="ar">🇸🇦 Arabic</option>
+        </select>
       </div>
       <div class="word-grid" id="wordGrid"></div>
     </div>
@@ -569,6 +582,19 @@
 // Reads auth token from URL hash, fetches words from Supabase
 
 const SUPABASE_URL = 'https://incvqtbkfntzdvbingqv.supabase.co';
+
+const LANGUAGES = {
+  es: { name: 'Spanish',    flag: '🇪🇸' },
+  fr: { name: 'French',     flag: '🇫🇷' },
+  de: { name: 'German',     flag: '🇩🇪' },
+  it: { name: 'Italian',    flag: '🇮🇹' },
+  pt: { name: 'Portuguese', flag: '🇵🇹' },
+  ru: { name: 'Russian',    flag: '🇷🇺' },
+  zh: { name: 'Chinese',    flag: '🇨🇳' },
+  ja: { name: 'Japanese',   flag: '🇯🇵' },
+  ko: { name: 'Korean',     flag: '🇰🇷' },
+  ar: { name: 'Arabic',     flag: '🇸🇦' },
+};
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3ZxdGJrZm50emR2YmluZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMTc3NzAsImV4cCI6MjA4OTg5Mzc3MH0.QCIoHwvt41QcLJ3ilSezTntNGzXyFFpHQf-7kz6mKzU';
 
 let authToken = null;
@@ -637,6 +663,7 @@ const Store = {
 // ── State ────────────────────────────────────────────────────────────────────
 let allWords = [];
 let currentFilter = 'all';
+let currentLangFilter = 'all';
 let searchQuery = '';
 let practiceMode = 'flashcard';
 let practiceQueue = [];
@@ -677,6 +704,7 @@ function filteredWords() {
   let words = allWords;
   if (currentFilter === 'learning') words = words.filter(w => w.strength < 4);
   if (currentFilter === 'mastered') words = words.filter(w => w.strength >= 4);
+  if (currentLangFilter !== 'all') words = words.filter(w => (w.language || 'es') === currentLangFilter);
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     words = words.filter(w => w.spanish.toLowerCase().includes(q) || (w.english || '').toLowerCase().includes(q));
@@ -708,7 +736,10 @@ function renderWordGrid() {
           <div class="card-es">${w.spanish}</div>
           <button class="card-delete" data-id="${w.id}" title="Remove">✕</button>
         </div>
-        ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
+          ${w.language && LANGUAGES[w.language] ? `<div style="font-size:10px;color:#888;font-family:Arial,sans-serif">${LANGUAGES[w.language].flag} ${LANGUAGES[w.language].name}</div>` : ''}
+        </div>
         <div class="card-en">${w.english || '—'}</div>
         <div class="card-footer">
           <div class="strength-dots">${dots}</div>
@@ -772,7 +803,7 @@ function renderFlashcard(area, pct) {
     <div class="flashcard-scene">
       <div class="flashcard" id="theCard">
         <div class="card-face card-front">
-          <div class="label">Spanish</div>
+          <div class="label">${LANGUAGES[word.language]?.flag || ''} ${LANGUAGES[word.language]?.name || 'Word'}</div>
           <div class="main-word">${word.spanish}</div>
           <div class="hint">Click to reveal</div>
         </div>
@@ -864,6 +895,11 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 
 document.getElementById('searchBox').addEventListener('input', e => {
   searchQuery = e.target.value;
+  renderWordGrid();
+});
+
+document.getElementById('langFilter').addEventListener('change', e => {
+  currentLangFilter = e.target.value;
   renderWordGrid();
 });
 

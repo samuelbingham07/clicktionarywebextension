@@ -1,8 +1,20 @@
 // Clicktionary Content Script
-// Detects highlighted Spanish text, fetches definitions, shows tooltip
+// Detects highlighted text, fetches definitions, shows tooltip
 
 let tooltip = null;
 let hideTimeout = null;
+let currentLanguage = 'es'; // default, updated from storage
+
+const LANGUAGE_NAMES = {
+  es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+  pt: 'Portuguese', ru: 'Russian', zh: 'Chinese', ja: 'Japanese',
+  ko: 'Korean', ar: 'Arabic'
+};
+
+// Load selected language from extension storage
+chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, (res) => {
+  if (res?.language) currentLanguage = res.language;
+});
 
 // ── Create tooltip element ──────────────────────────────────────────────────
 function createTooltip() {
@@ -10,7 +22,10 @@ function createTooltip() {
   el.id = 'clicktionary-tooltip';
   el.innerHTML = `
     <div class="ct-header">
-      <span class="ct-word"></span>
+      <div class="ct-header-left">
+        <span class="ct-lang"></span>
+        <span class="ct-word"></span>
+      </div>
       <button class="ct-close">✕</button>
     </div>
     <div class="ct-body">
@@ -28,10 +43,8 @@ function createTooltip() {
     </div>
   `;
   document.body.appendChild(el);
-
   el.querySelector('.ct-close').addEventListener('click', hideTooltip);
   el.querySelector('.ct-add-btn').addEventListener('click', () => addToWordBank());
-
   return el;
 }
 
@@ -40,7 +53,7 @@ function getTooltip() {
   return tooltip;
 }
 
-// ── Position tooltip near selection ────────────────────────────────────────
+// ── Position tooltip ────────────────────────────────────────────────────────
 function positionTooltip(rect) {
   const t = getTooltip();
   const margin = 10;
@@ -50,13 +63,11 @@ function positionTooltip(rect) {
   t.style.display = 'block';
   t.style.visibility = 'hidden';
 
-  // Keep within viewport
   const tWidth = t.offsetWidth || 300;
   const maxLeft = window.scrollX + window.innerWidth - tWidth - margin;
   if (left > maxLeft) left = maxLeft;
   if (left < margin) left = margin;
 
-  // If below fold, show above selection
   if (top + 200 > window.scrollY + window.innerHeight) {
     top = rect.top + window.scrollY - 200 - margin;
   }
@@ -70,44 +81,24 @@ function hideTooltip() {
   if (tooltip) tooltip.style.display = 'none';
 }
 
-// ── Fetch definition from MyMemory / Free Dictionary API ───────────────────
-async function fetchDefinition(word) {
-  const clean = word.trim().toLowerCase();
+// ── Fetch translation via MyMemory ──────────────────────────────────────────
+async function fetchDefinition(word, langCode) {
+  const clean = word.trim();
 
-  // Try Free Dictionary API first (works for single words)
-  try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/es/${encodeURIComponent(clean)}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data[0]) {
-        const entry = data[0];
-        const meaning = entry.meanings?.[0];
-        return {
-          word: entry.word,
-          pos: meaning?.partOfSpeech || '',
-          definition: meaning?.definitions?.[0]?.definition || '',
-          example: meaning?.definitions?.[0]?.example || '',
-          source: 'dictionary'
-        };
-      }
-    }
-  } catch (_) {}
-
-  // Fallback: MyMemory Translation API (good for phrases too)
+  // Try MyMemory translation API
   try {
     const res = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=es|en`
+      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${langCode}|en`
     );
     if (res.ok) {
       const data = await res.json();
       const translation = data?.responseData?.translatedText;
-      if (translation && translation.toLowerCase() !== clean) {
+      if (translation && translation.toLowerCase() !== clean.toLowerCase()) {
         return {
           word: clean,
           pos: '',
           definition: translation,
           example: '',
-          source: 'translation'
         };
       }
     }
@@ -116,26 +107,39 @@ async function fetchDefinition(word) {
   return null;
 }
 
+// ── Detect if text could be in selected language ────────────────────────────
+function couldBeSelectedLanguage(text, langCode) {
+  // For CJK and non-latin scripts, check for appropriate unicode ranges
+  if (langCode === 'zh') return /[\u4e00-\u9fff]/.test(text);
+  if (langCode === 'ja') return /[\u3040-\u30ff\u4e00-\u9fff]/.test(text);
+  if (langCode === 'ko') return /[\uac00-\ud7af]/.test(text);
+  if (langCode === 'ar') return /[\u0600-\u06ff]/.test(text);
+  if (langCode === 'ru') return /[\u0400-\u04ff]/.test(text);
+  // Latin-script languages — just check for letters
+  return /[a-zA-ZÀ-ž]/.test(text);
+}
+
 // ── Main: handle text selection ─────────────────────────────────────────────
 let lastWord = '';
 let lastDefinition = null;
 
 document.addEventListener('mouseup', async (e) => {
-  // Don't trigger inside our own tooltip
   if (e.target.closest('#clicktionary-tooltip')) return;
+
+  // Refresh language on each lookup in case user changed it
+  chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, (res) => {
+    if (res?.language) currentLanguage = res.language;
+  });
 
   const selection = window.getSelection();
   const text = selection?.toString().trim();
 
-  if (!text || text.length < 2 || text.length > 100) {
-    // Small delay so clicking inside tooltip doesn't close it
+  if (!text || text.length < 1 || text.length > 100) {
     hideTimeout = setTimeout(hideTooltip, 200);
     return;
   }
 
-  // Basic check: does it look like it could be Spanish?
-  // (Contains at least one letter, allow accented chars)
-  if (!/[a-záéíóúüñ]/i.test(text)) return;
+  if (!couldBeSelectedLanguage(text, currentLanguage)) return;
 
   clearTimeout(hideTimeout);
 
@@ -146,7 +150,8 @@ document.addEventListener('mouseup', async (e) => {
   lastWord = text;
   lastDefinition = null;
 
-  // Reset UI
+  // Show language label in header
+  t.querySelector('.ct-lang').textContent = LANGUAGE_NAMES[currentLanguage] || '';
   t.querySelector('.ct-word').textContent = text;
   t.querySelector('.ct-loading').style.display = 'block';
   t.querySelector('.ct-result').style.display = 'none';
@@ -156,7 +161,7 @@ document.addEventListener('mouseup', async (e) => {
 
   positionTooltip(rect);
 
-  const def = await fetchDefinition(text);
+  const def = await fetchDefinition(text, currentLanguage);
   lastDefinition = def;
 
   t.querySelector('.ct-loading').style.display = 'none';
@@ -177,15 +182,14 @@ async function addToWordBank() {
 
   const entry = {
     id: Date.now(),
-    spanish: lastWord,
+    spanish: lastWord,         // column is named 'spanish' in DB but holds any language
     english: lastDefinition?.definition || '',
     pos: lastDefinition?.pos || '',
+    language: currentLanguage,
     addedAt: new Date().toISOString(),
-    nextReview: new Date().toISOString(),
-    strength: 0   // 0-5 mastery score
+    strength: 0
   };
 
-  // Load existing bank
   chrome.runtime.sendMessage({ type: 'ADD_WORD', entry }, (response) => {
     if (response?.success) {
       const t = getTooltip();
