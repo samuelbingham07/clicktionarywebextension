@@ -98,51 +98,43 @@ const LINGVA_INSTANCES = [
 
 const MYMEMORY_CODES = { zh: 'zh-CN' };
 
-async function fetchWithTimeout(url, ms = 5000) {
+function fetchWithTimeout(url, ms = 2000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), ms);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(id);
-    return res;
-  } catch (e) {
-    clearTimeout(id);
-    throw e;
-  }
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(id));
 }
 
 // ── Fetch translation (Lingva primary, MyMemory fallback) ───────────────────
 async function fetchDefinition(word, langCode) {
   const clean = word.trim();
+  const encoded = encodeURIComponent(clean);
 
-  // 1. Try Lingva Translate instances
-  for (const base of LINGVA_INSTANCES) {
-    try {
-      const res = await fetchWithTimeout(
-        `${base}/api/v1/${langCode}/en/${encodeURIComponent(clean)}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const translation = data?.translation;
-        if (translation && translation.toLowerCase() !== clean.toLowerCase()) {
-          return { word: clean, pos: '', definition: translation, example: '' };
-        }
-      }
-    } catch (_) {}
-  }
+  // 1. Race all Lingva instances in parallel — first valid response wins
+  const lingva = await Promise.any(
+    LINGVA_INSTANCES.map(base =>
+      fetchWithTimeout(`${base}/api/v1/${langCode}/en/${encoded}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          const t = data?.translation;
+          if (!t || t.toLowerCase() === clean.toLowerCase()) return Promise.reject();
+          return t;
+        })
+    )
+  ).catch(() => null);
+
+  if (lingva) return { word: clean, pos: '', definition: lingva, example: '' };
 
   // 2. Fallback: MyMemory
   try {
     const mmCode = MYMEMORY_CODES[langCode] || langCode;
-    const res = await fetchWithTimeout(
-      `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${mmCode}|en`
+    const r = await fetchWithTimeout(
+      `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
     );
-    if (res.ok) {
-      const data = await res.json();
-      const translation = data?.responseData?.translatedText;
-      if (translation && translation.toLowerCase() !== clean.toLowerCase()) {
-        return { word: clean, pos: '', definition: translation, example: '' };
-      }
+    if (r.ok) {
+      const data = await r.json();
+      const t = data?.responseData?.translatedText;
+      if (t && t.toLowerCase() !== clean.toLowerCase())
+        return { word: clean, pos: '', definition: t, example: '' };
     }
   } catch (_) {}
 
