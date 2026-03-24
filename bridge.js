@@ -7,8 +7,16 @@ window.addEventListener('message', async (event) => {
   if (event.source !== window) return;
   if (!event.data?.type?.startsWith('CLICKTIONARY_')) return;
 
-
   const { type, payload } = event.data;
+
+  if (type === 'CLICKTIONARY_GET_SESSION') {
+    chrome.storage.local.get('supabase_session', (data) => {
+      window.postMessage({
+        type: 'CLICKTIONARY_SESSION_RESPONSE',
+        session: data.supabase_session || null
+      }, '*');
+    });
+  }
 
   if (type === 'CLICKTIONARY_GET_WORDS') {
     chrome.storage.local.get('wordBank', (data) => {
@@ -46,5 +54,10 @@ window.addEventListener('message', async (event) => {
   }
 });
 
-// Signal to the page that the extension bridge is ready
-window.postMessage({ type: 'CLICKTIONARY_BRIDGE_READY' }, '*');
+// Signal to the page that the extension bridge is ready, including any stored session
+chrome.storage.local.get('supabase_session', (data) => {
+  window.postMessage({
+    type: 'CLICKTIONARY_BRIDGE_READY',
+    session: data.supabase_session || null
+  }, '*');
+});

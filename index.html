@@ -782,7 +782,27 @@ let practiceIndex = 0;
 let isFlipped = false;
 
 async function init() {
+  // 1. Try URL hash (passed by popup's "Open Word Bank" button)
   authToken = getTokenFromHash();
+  if (authToken) {
+    history.replaceState(null, '', window.location.pathname);
+  }
+
+  // 2. If no URL token, ask the bridge content script for the stored session
+  if (!authToken) {
+    authToken = await new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 400);
+      window.addEventListener('message', function handler(e) {
+        const t = e.data?.type;
+        if (t === 'CLICKTIONARY_BRIDGE_READY' || t === 'CLICKTIONARY_SESSION_RESPONSE') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve(e.data?.session?.access_token || null);
+        }
+      });
+      window.postMessage({ type: 'CLICKTIONARY_GET_SESSION' }, '*');
+    });
+  }
 
   if (!authToken) {
     document.getElementById('directVisitBanner').style.display = 'block';
@@ -790,9 +810,6 @@ async function init() {
     renderWordGrid();
     return;
   }
-
-  // Clear token from URL bar for security
-  history.replaceState(null, '', window.location.pathname);
 
   allWords = await Store.getWords();
   renderStats();
