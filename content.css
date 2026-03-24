@@ -110,11 +110,27 @@
   line-height: 1.4;
 }
 
-.ct-error {
-  font-size: 13px;
+.ct-error-msg {
+  font-size: 12px;
   color: #764c0f;
   font-style: italic;
+  margin-bottom: 8px;
 }
+
+.ct-custom-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #f0d9a0;
+  border-radius: 6px;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 13px;
+  color: #222;
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.ct-custom-input:focus { border-color: #f0b400; }
 
 .ct-footer {
   padding: 8px 14px 12px;

@@ -42,7 +42,10 @@ function createTooltip() {
         <div class="ct-definition"></div>
         <div class="ct-examples"></div>
       </div>
-      <div class="ct-error" style="display:none">Could not find definition.</div>
+      <div class="ct-error" style="display:none">
+        <div class="ct-error-msg">No definition found.</div>
+        <input class="ct-custom-input" placeholder="Enter your own definition…" />
+      </div>
     </div>
     <div class="ct-footer">
       <button class="ct-add-btn">＋ Add to Word Bank</button>
@@ -52,6 +55,10 @@ function createTooltip() {
   document.body.appendChild(el);
   el.querySelector('.ct-close').addEventListener('click', hideTooltip);
   el.querySelector('.ct-add-btn').addEventListener('click', () => addToWordBank());
+  el.querySelector('.ct-custom-input').addEventListener('input', (e) => {
+    el.querySelector('.ct-add-btn').style.display = e.target.value.trim() ? 'inline-flex' : 'none';
+  });
+  el.querySelector('.ct-custom-input').addEventListener('mousedown', (e) => e.stopPropagation());
   return el;
 }
 
@@ -224,6 +231,8 @@ async function handleSelection(myId) {
     t.querySelector('.ct-examples').textContent = def.example ? `"${def.example}"` : '';
     t.querySelector('.ct-result').style.display = 'block';
   } else {
+    t.querySelector('.ct-custom-input').value = '';
+    t.querySelector('.ct-add-btn').style.display = 'none'; // hidden until user types a definition
     t.querySelector('.ct-error').style.display = 'block';
   }
 }
@@ -232,10 +241,14 @@ async function handleSelection(myId) {
 async function addToWordBank() {
   if (!lastWord) return;
 
+  const t = getTooltip();
+  const customInput = t.querySelector('.ct-custom-input');
+  const english = lastDefinition?.definition || customInput.value.trim();
+
   const entry = {
     id: Date.now(),
-    spanish: lastWord,         // column is named 'spanish' in DB but holds any language
-    english: lastDefinition?.definition || '',
+    spanish: lastWord,
+    english,
     pos: lastDefinition?.pos || '',
     language: currentLanguage,
     addedAt: new Date().toISOString(),
