@@ -9,7 +9,8 @@
     "scripting"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "<all_urls>",
+    "https://incvqtbkfntzdvbingqv.supabase.co/*"
   ],
   "background": {
     "service_worker": "background.js"

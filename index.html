@@ -506,8 +506,11 @@
 </head>
 <body>
 <div class="app">
+  <div id="directVisitBanner" style="display:none; background:#fffde7; border-bottom:2px solid #f5e642; padding:12px 48px; font-family:'DM Sans',sans-serif; font-size:13px; color:#555; text-align:center;">
+    ⚠️ <strong>Sign in via the Clicktionary extension</strong> — click the extension icon, sign in, then press "Open Word Bank & Practice".
+  </div>
   <nav>
-    <div class="nav-logo">Click<span>tionary</span></div>
+    <div class="nav-logo">Spanish<span>Lens</span></div>
     <div class="nav-tabs">
       <button class="nav-tab active" data-view="bank">Word Bank</button>
       <button class="nav-tab" data-view="practice">Practice</button>
@@ -563,42 +566,69 @@
 
 <script>
 // ── Data Layer ───────────────────────────────────────────────────────────────
-// Words are passed from the extension via URL hash (#words=base64encoded)
-// Updates are saved to localStorage so practice scores persist in the session.
+// Reads auth token from URL hash, fetches words from Supabase
 
-function loadWordsFromHash() {
+const SUPABASE_URL = 'https://incvqtbkfntzdvbingqv.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3ZxdGJrZm50emR2YmluZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMTc3NzAsImV4cCI6MjA4OTg5Mzc3MH0.QCIoHwvt41QcLJ3ilSezTntNGzXyFFpHQf-7kz6mKzU';
+
+let authToken = null;
+
+function getTokenFromHash() {
   try {
     const hash = window.location.hash;
-    const match = hash.match(/#words=(.+)/);
-    if (match) {
-      const decoded = decodeURIComponent(escape(atob(match[1])));
-      const words = JSON.parse(decoded);
-      // Merge with any locally saved strength scores
-      const local = JSON.parse(localStorage.getItem('clicktionary_scores') || '{}');
-      return words.map(w => ({ ...w, strength: local[w.id] ?? w.strength }));
-    }
-  } catch (e) {
-    console.error('Clicktionary: failed to parse words from URL', e);
-  }
-  return JSON.parse(localStorage.getItem('clicktionary_words') || '[]');
+    const tokenMatch = hash.match(/token=([^&]+)/);
+    if (tokenMatch) return decodeURIComponent(tokenMatch[1]);
+  } catch (e) {}
+  return null;
+}
+
+function supabaseHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${authToken}`
+  };
 }
 
 const Store = {
   async getWords() {
-    return loadWordsFromHash();
-  },
-  async saveWords(words) {
-    localStorage.setItem('clicktionary_words', JSON.stringify(words));
+    if (!authToken) return [];
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/words?select=*&order=added_at.desc`, {
+        headers: supabaseHeaders()
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map(row => ({
+        id: row.id,
+        spanish: row.spanish,
+        english: row.english,
+        pos: row.pos,
+        strength: row.strength,
+        addedAt: row.added_at
+      }));
+    } catch (e) {
+      console.error('Clicktionary: failed to fetch words', e);
+      return [];
+    }
   },
   async deleteWord(id) {
-    // Deletions only affect the local session view (can't write back to extension from here)
+    if (!authToken) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/words?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders()
+    });
     allWords = allWords.filter(w => w.id !== id);
   },
   async updateWord(id, updates) {
-    // Save strength scores locally so practice progress persists
-    const scores = JSON.parse(localStorage.getItem('clicktionary_scores') || '{}');
-    if (updates.strength !== undefined) scores[id] = updates.strength;
-    localStorage.setItem('clicktionary_scores', JSON.stringify(scores));
+    if (!authToken) return;
+    const body = {};
+    if (updates.strength !== undefined) body.strength = updates.strength;
+    await fetch(`${SUPABASE_URL}/rest/v1/words?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders(),
+      body: JSON.stringify(body)
+    });
     const i = allWords.findIndex(w => w.id === id);
     if (i > -1) allWords[i] = { ...allWords[i], ...updates };
   }
@@ -614,6 +644,18 @@ let practiceIndex = 0;
 let isFlipped = false;
 
 async function init() {
+  authToken = getTokenFromHash();
+
+  if (!authToken) {
+    document.getElementById('directVisitBanner').style.display = 'block';
+    renderStats();
+    renderWordGrid();
+    return;
+  }
+
+  // Clear token from URL bar for security
+  history.replaceState(null, '', window.location.pathname);
+
   allWords = await Store.getWords();
   renderStats();
   renderWordGrid();
