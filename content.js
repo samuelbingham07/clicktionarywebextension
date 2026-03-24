@@ -174,23 +174,29 @@ function couldBeSelectedLanguage(text, langCode) {
 let lastWord = '';
 let lastDefinition = null;
 let selectionDebounce = null;
+let requestId = 0; // incremented on every new mouseup; stale async calls check this
 
 document.addEventListener('mouseup', (e) => {
   if (e.target.closest('#clicktionary-tooltip')) return;
 
-  // Debounce: the first mouseup of a double-click fires before the selection
-  // settles. Cancel + restart so only the final event in a rapid sequence runs.
   clearTimeout(selectionDebounce);
   clearTimeout(hideTimeout);
+  const myId = ++requestId;
 
+  // Check isEnabled synchronously — no async, no latency
+  if (!isEnabled) {
+    hideTooltip();
+    return;
+  }
+
+  // Debounce 50ms so the final mouseup of a double-click wins
   selectionDebounce = setTimeout(() => {
-    if (!isEnabled) return; // synchronous check — no async needed
-    handleSelection(e);
+    if (myId !== requestId) return; // another mouseup fired, bail
+    handleSelection(myId);
   }, 50);
 });
 
-async function handleSelection(e) {
-
+async function handleSelection(myId) {
   const selection = window.getSelection();
   const text = selection?.toString().trim();
 
@@ -210,7 +216,6 @@ async function handleSelection(e) {
   lastWord = text;
   lastDefinition = null;
 
-  // Show language label in header
   t.querySelector('.ct-lang').textContent = LANGUAGE_NAMES[currentLanguage] || '';
   t.querySelector('.ct-word').textContent = text;
   t.querySelector('.ct-loading').style.display = 'block';
@@ -222,8 +227,11 @@ async function handleSelection(e) {
   positionTooltip(rect);
 
   const def = await fetchDefinition(text, currentLanguage);
-  lastDefinition = def;
 
+  // If a newer mouseup fired while we were fetching, discard this result
+  if (myId !== requestId) return;
+
+  lastDefinition = def;
   t.querySelector('.ct-loading').style.display = 'none';
 
   if (def) {
