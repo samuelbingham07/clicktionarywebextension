@@ -11,14 +11,9 @@ const LANGUAGE_NAMES = {
   ko: 'Korean', ar: 'Arabic'
 };
 
-let extensionEnabled = false; // false = show tooltip (On)
-
-// Load initial state
-chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, (res) => {
-  if (res) extensionEnabled = res.enabled;
-});
-chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, (res) => {
-  if (res?.language) currentLanguage = res.language;
+// Load initial state directly from storage (reliable, no message-passing)
+chrome.storage.local.get(['extensionEnabled', 'selectedLanguage'], (r) => {
+  if (r.selectedLanguage) currentLanguage = r.selectedLanguage;
 });
 
 // ── Create tooltip element ──────────────────────────────────────────────────
@@ -162,22 +157,27 @@ function couldBeSelectedLanguage(text, langCode) {
 // ── Main: handle text selection ─────────────────────────────────────────────
 let lastWord = '';
 let lastDefinition = null;
+let selectionDebounce = null;
 
-document.addEventListener('mouseup', async (e) => {
+document.addEventListener('mouseup', (e) => {
   if (e.target.closest('#clicktionary-tooltip')) return;
 
-  // Check enabled state first — all logic runs inside the callback so the check is never stale
-  chrome.runtime.sendMessage({ type: 'GET_ENABLED' }, (res) => {
-    if (res) extensionEnabled = res.enabled;
-    if (extensionEnabled) return; // true = stored "off" → hide tooltip
-    handleSelection(e);
-  });
+  // Debounce: the first mouseup of a double-click fires before the selection
+  // settles. Cancel + restart so only the final event in a rapid sequence runs.
+  clearTimeout(selectionDebounce);
+  clearTimeout(hideTimeout);
+
+  selectionDebounce = setTimeout(() => {
+    // Read state directly from storage — avoids unreliable message-passing
+    chrome.storage.local.get(['extensionEnabled', 'selectedLanguage'], (r) => {
+      if (r.extensionEnabled) return; // true = user toggled Off
+      if (r.selectedLanguage) currentLanguage = r.selectedLanguage;
+      handleSelection(e);
+    });
+  }, 50);
 });
 
 async function handleSelection(e) {
-  chrome.runtime.sendMessage({ type: 'GET_LANGUAGE' }, (res) => {
-    if (res?.language) currentLanguage = res.language;
-  });
 
   const selection = window.getSelection();
   const text = selection?.toString().trim();
