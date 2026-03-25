@@ -43,7 +43,8 @@ function createTooltip() {
         <div class="ct-examples"></div>
       </div>
       <div class="ct-error" style="display:none">
-        <div class="ct-error-msg">No definition found.</div>
+        <div class="ct-error-msg">Add failed — no definition found.</div>
+        <div class="ct-error-sub">Enter your own to save this word:</div>
         <input class="ct-custom-input" placeholder="Enter your own definition…" />
       </div>
     </div>
@@ -218,7 +219,7 @@ async function handleSelection(myId) {
   t.querySelector('.ct-result').style.display = 'none';
   t.querySelector('.ct-error').style.display = 'none';
   t.querySelector('.ct-saved-msg').style.display = 'none';
-  t.querySelector('.ct-add-btn').style.display = 'inline-flex';
+  t.querySelector('.ct-add-btn').style.display = 'none';
 
   positionTooltip(rect);
 
@@ -235,10 +236,11 @@ async function handleSelection(myId) {
     t.querySelector('.ct-definition').textContent = def.definition;
     t.querySelector('.ct-examples').textContent = def.example ? `"${def.example}"` : '';
     t.querySelector('.ct-result').style.display = 'block';
+    t.querySelector('.ct-add-btn').style.display = 'inline-flex';
   } else {
     t.querySelector('.ct-custom-input').value = '';
-    t.querySelector('.ct-add-btn').style.display = 'none'; // hidden until user types a definition
     t.querySelector('.ct-error').style.display = 'block';
+    // add button stays hidden until user types their own definition
   }
 }
 
