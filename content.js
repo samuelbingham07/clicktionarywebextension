@@ -112,8 +112,13 @@ function fetchWithTimeout(url, ms = 2000) {
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(id));
 }
 
+// ── Translation cache (in-memory; reset on extension reload) ────────────────
+const defCache = new Map();
+
 // ── Fetch translation (Lingva primary, MyMemory fallback) ───────────────────
 async function fetchDefinition(word, langCode) {
+  const cacheKey = `${langCode}:${word.toLowerCase()}`;
+  if (defCache.has(cacheKey)) return defCache.get(cacheKey);
   const clean = word.trim();
   const encoded = encodeURIComponent(clean);
 
@@ -130,7 +135,11 @@ async function fetchDefinition(word, langCode) {
     )
   ).catch(() => null);
 
-  if (lingva) return { word: clean, pos: '', definition: lingva, example: '' };
+  if (lingva) {
+    const result = { word: clean, pos: '', definition: lingva, example: '' };
+    defCache.set(cacheKey, result);
+    return result;
+  }
 
   // 2. Fallback: MyMemory
   try {
@@ -141,11 +150,15 @@ async function fetchDefinition(word, langCode) {
     if (r.ok) {
       const data = await r.json();
       const t = data?.responseData?.translatedText;
-      if (t && t.toLowerCase() !== clean.toLowerCase())
-        return { word: clean, pos: '', definition: t, example: '' };
+      if (t && t.toLowerCase() !== clean.toLowerCase()) {
+        const result = { word: clean, pos: '', definition: t, example: '' };
+        defCache.set(cacheKey, result);
+        return result;
+      }
     }
   } catch (_) {}
 
+  defCache.set(cacheKey, null);
   return null;
 }
 
@@ -271,10 +284,20 @@ async function addToWordBank() {
   });
 }
 
-// ── Close on outside click ──────────────────────────────────────────────────
+// ── Close on outside click + speculative prefetch ───────────────────────────
 document.addEventListener('mousedown', (e) => {
   if (tooltip && !e.target.closest('#clicktionary-tooltip')) {
     clearTimeout(hideTimeout);
     hideTimeout = setTimeout(hideTooltip, 150);
+  }
+
+  // Speculatively warm the cache: if there's already a selection when the user
+  // clicks (e.g. double-click in progress), kick off the fetch immediately so
+  // the result may be ready by the time mouseup fires.
+  const sel = window.getSelection();
+  const text = sel?.toString().trim();
+  if (text && text.length >= 1 && text.length <= 100 && couldBeSelectedLanguage(text, currentLanguage)) {
+    const key = `${currentLanguage}:${text.toLowerCase()}`;
+    if (!defCache.has(key)) fetchDefinition(text, currentLanguage);
   }
 });
