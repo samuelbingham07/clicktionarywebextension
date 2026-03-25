@@ -174,6 +174,72 @@ function couldBeSelectedLanguage(text, langCode) {
   return /[a-zA-ZÀ-ž]/.test(text);
 }
 
+// ── Page scan: prefetch definitions for hard words ──────────────────────────
+
+function extractHardWords(langCode) {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const seen = new Set();
+  const words = [];
+  let node;
+
+  while ((node = walker.nextNode()) && words.length < 300) {
+    // Skip script/style content
+    const parent = node.parentElement?.tagName;
+    if (parent === 'SCRIPT' || parent === 'STYLE' || parent === 'NOSCRIPT') continue;
+
+    const text = node.textContent;
+    let matches;
+
+    if (langCode === 'zh' || langCode === 'ja') {
+      matches = text.match(/[\u4e00-\u9fff\u3040-\u30ff]{2,4}/g) || [];
+    } else if (langCode === 'ko') {
+      matches = text.match(/[\uac00-\ud7af]{2,6}/g) || [];
+    } else if (langCode === 'ar') {
+      matches = text.match(/[\u0600-\u06ff]{4,}/g) || [];
+    } else if (langCode === 'ru') {
+      matches = text.match(/[\u0400-\u04ff]{5,}/g) || [];
+    } else {
+      // Latin-script: 7+ chars filters out articles, prepositions, common short words
+      matches = text.match(/[a-zA-ZÀ-ž]{7,}/g) || [];
+    }
+
+    for (const w of matches) {
+      const lc = w.toLowerCase();
+      if (!seen.has(lc)) {
+        seen.add(lc);
+        words.push(w);
+      }
+    }
+  }
+
+  // Longer words are statistically less common → harder vocabulary
+  return words.sort((a, b) => b.length - a.length).slice(0, 10);
+}
+
+async function prefetchHardWords() {
+  // Wait for page to settle and for storage read to complete
+  await new Promise(r => setTimeout(r, 2000));
+
+  chrome.storage.local.get('extensionOff', async (r) => {
+    if (r.extensionOff) return;
+
+    const words = extractHardWords(currentLanguage);
+    for (const word of words) {
+      const key = `${currentLanguage}:${word.toLowerCase()}`;
+      if (!defCache.has(key)) {
+        fetchDefinition(word, currentLanguage); // fire and forget
+        await new Promise(r => setTimeout(r, 500)); // stagger to avoid rate limits
+      }
+    }
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', prefetchHardWords);
+} else {
+  prefetchHardWords();
+}
+
 // ── Main: handle text selection ─────────────────────────────────────────────
 let lastWord = '';
 let lastDefinition = null;
