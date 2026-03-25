@@ -178,11 +178,16 @@ document.addEventListener('mouseup', (e) => {
   // no race condition if the user toggles off and highlights immediately.
   selectionDebounce = setTimeout(() => {
     if (myId !== requestId) return;
-    chrome.storage.local.get('extensionOff', (r) => {
-      if (myId !== requestId) return;
-      if (r.extensionOff) { hideTooltip(); return; }
+    try {
+      chrome.storage.local.get('extensionOff', (r) => {
+        if (myId !== requestId) return;
+        if (r.extensionOff) { hideTooltip(); return; }
+        handleSelection(myId);
+      });
+    } catch (_) {
+      // Extension context invalidated (e.g. after a reload) — show tooltip anyway
       handleSelection(myId);
-    });
+    }
   }, 50);
 });
 
