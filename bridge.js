@@ -1,6 +1,8 @@
 // Clicktionary Bridge Content Script
 // Injected into the hosted website to pass chrome.storage data to the page
 
+const BRIDGE_ORIGIN = 'https://samuelbingham07.github.io';
+
 
 // Listen for requests from the website
 window.addEventListener('message', async (event) => {
@@ -14,7 +16,7 @@ window.addEventListener('message', async (event) => {
       window.postMessage({
         type: 'CLICKTIONARY_SESSION_RESPONSE',
         session: data.supabase_session || null
-      }, '*');
+      }, BRIDGE_ORIGIN);
     });
   }
 
@@ -23,13 +25,13 @@ window.addEventListener('message', async (event) => {
       window.postMessage({
         type: 'CLICKTIONARY_WORDS_RESPONSE',
         words: data.wordBank || []
-      }, '*');
+      }, BRIDGE_ORIGIN);
     });
   }
 
   if (type === 'CLICKTIONARY_SAVE_WORDS') {
     chrome.storage.local.set({ wordBank: payload.words }, () => {
-      window.postMessage({ type: 'CLICKTIONARY_SAVE_RESPONSE', success: true }, '*');
+      window.postMessage({ type: 'CLICKTIONARY_SAVE_RESPONSE', success: true }, BRIDGE_ORIGIN);
     });
   }
 
@@ -37,7 +39,7 @@ window.addEventListener('message', async (event) => {
     chrome.storage.local.get('wordBank', (data) => {
       const words = (data.wordBank || []).filter(w => w.id !== payload.id);
       chrome.storage.local.set({ wordBank: words }, () => {
-        window.postMessage({ type: 'CLICKTIONARY_DELETE_RESPONSE', success: true }, '*');
+        window.postMessage({ type: 'CLICKTIONARY_DELETE_RESPONSE', success: true }, BRIDGE_ORIGIN);
       });
     });
   }
@@ -48,7 +50,7 @@ window.addEventListener('message', async (event) => {
       const i = words.findIndex(w => w.id === payload.id);
       if (i > -1) words[i] = { ...words[i], ...payload.updates };
       chrome.storage.local.set({ wordBank: words }, () => {
-        window.postMessage({ type: 'CLICKTIONARY_UPDATE_RESPONSE', success: true }, '*');
+        window.postMessage({ type: 'CLICKTIONARY_UPDATE_RESPONSE', success: true }, BRIDGE_ORIGIN);
       });
     });
   }
@@ -59,5 +61,5 @@ chrome.storage.local.get('supabase_session', (data) => {
   window.postMessage({
     type: 'CLICKTIONARY_BRIDGE_READY',
     session: data.supabase_session || null
-  }, '*');
+  }, BRIDGE_ORIGIN);
 });
