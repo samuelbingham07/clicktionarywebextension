@@ -1,64 +1,90 @@
-# Clicktionary 🔍
+# Clicktionary
 
-Highlight Spanish text on any webpage to get English definitions, then practice your saved words on your hosted word bank site.
+Highlight any word on any webpage to get instant translations in 10 languages, then save it to your personal word bank and practice with flashcards and quizzes.
+
+Live site: [samuelbingham07.github.io/clicktionarywebextension](https://samuelbingham07.github.io/clicktionarywebextension/)
+
+---
 
 ## Project Structure
 
-All files live in a single folder:
-
 ```
 clicktionarywebextension/
-├── manifest.json       ← Extension config
-├── content.js          ← Runs on every page, detects highlights
+├── manifest.json       ← Extension config (MV3)
+├── content.js          ← Tooltip on text highlight, translation lookup, word saving
 ├── content.css         ← Tooltip styles
-├── background.js       ← Service worker, manages chrome.storage
-├── bridge.js           ← Unused currently (see Notes)
+├── background.js       ← Service worker: auth, Supabase sync, word bank
+├── bridge.js           ← Content script injected into GitHub Pages site for auth sync
 ├── popup.html          ← Extension popup UI
-├── popup.js            ← Encodes words into URL and opens website
+├── popup.js            ← Popup logic: word list, language selector, auth
+├── privacy.html        ← Privacy policy (hosted on GitHub Pages)
+├── index.html          ← Word bank & practice site (hosted on GitHub Pages)
 ├── icon16.png
-├── icon48.png
-├── icon128.png
-└── index.html          ← Word bank & practice site (hosted on GitHub Pages)
+├── logo.png            ← Used as icon48 and favicon
+└── icon128.png
 ```
+
+---
 
 ## How It Works
 
-1. **Highlighting** — `content.js` detects when you select text on any webpage
-2. **Definition lookup** — tries the [Free Dictionary API](https://dictionaryapi.dev/) for single words, falls back to [MyMemory](https://mymemory.translated.net/) for phrases
-3. **Saving** — clicking "＋ Add to Word Bank" stores the word in `chrome.storage.local` via `background.js`
-4. **Website** — clicking "Open Word Bank & Practice" in the popup encodes your saved words as a base64 string in the URL hash and opens your GitHub Pages site
-5. **Display** — `index.html` reads the words from the URL hash on load and renders them
+1. **Highlight** any word or phrase on any webpage
+2. **Tooltip appears** with the translation fetched from [Lingva Translate](https://lingva.ml/) (parallel race across multiple instances, 2s timeout) with [MyMemory](https://mymemory.translated.net/) as fallback
+3. **Add to word bank** — saves to Supabase (when signed in) or `chrome.storage.local` (offline fallback)
+4. **Website** syncs automatically via `bridge.js`, which passes the stored Supabase session to the GitHub Pages site so you stay logged in without re-authenticating
+5. **Practice** on the word bank site with flashcards, multiple choice, and mastery tracking
 
-## Setup
+### Translation pipeline
+- Lingva instances are queried in parallel via `Promise.any()` with a 2s timeout — fastest one wins
+- On page load, the extension silently prefetches definitions for the 10 hardest words on the page (longest unique words = statistically less common vocabulary)
+- Results are cached in memory so repeat lookups are instant
 
-### 1. Load the extension in Chrome
+### Auth
+- Email/password or Google OAuth via `chrome.identity.launchWebAuthFlow`
+- Sessions stored in `chrome.storage.local`, synced to GitHub Pages site via `bridge.js`
+- Stable extension ID: `fdbaeflfmkhkgelpaaeoihikpekkmfjj` (locked via RSA key in manifest)
+
+### Supported languages
+Spanish, French, German, Italian, Portuguese, Japanese, Chinese, Korean, Arabic, Russian
+
+---
+
+## Setup (development)
+
+### Load the extension in Chrome
 1. Go to `chrome://extensions`
-2. Enable **Developer mode** (top right toggle)
-3. Click **Load unpacked**
-4. Select this folder
+2. Enable **Developer mode** (top-right toggle)
+3. Click **Load unpacked** and select this folder
 
-### 2. Website
-The word bank is hosted on GitHub Pages at:
-`https://samuelbingham07.github.io/clicktionarywebextension/`
+### After editing files
+Go to `chrome://extensions`, click the **reload icon** on Clicktionary, then reload any open tabs you want the changes to apply to. Content scripts do not hot-reload.
 
-To update the site, push changes to the GitHub repo and Pages will rebuild automatically (~30 seconds).
+### Google OAuth (requires manual dashboard steps)
+- Google Cloud Console → OAuth 2.0 Client → add authorized redirect URI:
+  `https://fdbaeflfmkhkgelpaaeoihikpekkmfjj.chromiumapp.org/`
+- Supabase dashboard → Authentication → Providers → Google → enable + add Client ID & Secret
 
-### 3. Reload after changes
-After editing any extension file, go to `chrome://extensions` and click the **reload icon** on the Clicktionary card. Then close and reopen any tabs you want the changes to apply to.
+---
 
 ## Features
 
-- ✅ Tooltip with definition, part of speech, and example sentence
-- ✅ Fallback translation API for phrases
-- ✅ One-click "Add to Word Bank" with duplicate detection
-- ✅ Extension popup shows recent words and stats
-- ✅ Word bank website with search and filter (All / Learning / Mastered)
-- ✅ Flashcard practice mode with flip animation
-- ✅ Multiple choice practice mode
-- ✅ Mastery strength tracking (0–5 score), saved to localStorage
+- Tooltip translation for any highlighted text, 10 languages
+- Parallel Lingva instances with MyMemory fallback
+- Speculative prefetch of hard vocabulary on page load
+- In-memory translation cache (instant repeat lookups)
+- Add to word bank with duplicate detection
+- Custom definition input if automatic lookup fails
+- Google OAuth + email/password auth via Supabase
+- Word bank website with search, filter, and language tabs
+- Flashcard and multiple choice practice modes
+- Mastery strength tracking (0–5), synced to Supabase
+- On/off toggle in popup
+- Works offline (falls back to local storage)
 
-## Notes
+---
 
-- **Deleting words** on the website only affects the current session view — it does not remove words from the extension's storage. To permanently delete a word, close and reopen the word bank via the popup.
-- **Practice scores** are saved to `localStorage` in your browser and persist between visits.
-- **bridge.js** is included but currently inactive. It was an earlier attempt at two-way sync between the extension and website. The URL hash approach is used instead.
+## Deployment
+
+The website (`index.html`, `privacy.html`) is hosted on GitHub Pages. Push to `main` and it rebuilds automatically in ~30 seconds.
+
+Privacy policy URL: `https://samuelbingham07.github.io/clicktionarywebextension/privacy.html`
