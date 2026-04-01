@@ -9,14 +9,26 @@ function isProseMirrorEmpty(el) {
 
 function fillProseMirror(el, value) {
   el.focus();
-  // Select only the content inside this specific element, not the whole page
+
+  // Place cursor inside the element
   const selection = window.getSelection();
   const range = document.createRange();
   range.selectNodeContents(el);
   selection.removeAllRanges();
   selection.addRange(range);
-  // ProseMirror listens to beforeinput/input events — insertText triggers both
-  document.execCommand('insertText', false, value);
+
+  // ProseMirror handles beforeinput events with inputType 'insertText'
+  const beforeInput = new InputEvent('beforeinput', {
+    bubbles: true, cancelable: true,
+    inputType: 'insertText',
+    data: value
+  });
+  el.dispatchEvent(beforeInput);
+
+  if (!beforeInput.defaultPrevented) {
+    // Fallback: execCommand if ProseMirror didn't handle it
+    document.execCommand('insertText', false, value);
+  }
 }
 
 function findAllTermInputs() {
