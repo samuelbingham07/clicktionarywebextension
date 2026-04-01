@@ -2,20 +2,32 @@
 // Injected into quizlet.com set editor pages
 // Listens for INJECT_QUIZLET_CARD messages from background.js
 
-// React's controlled inputs ignore direct .value assignments.
-// This bypasses the synthetic event system by using the native setter.
-function setReactInputValue(el, value) {
-  const nativeSetter = Object.getOwnPropertyDescriptor(
-    el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype,
-    'value'
-  ).set;
-  nativeSetter.call(el, value);
-  el.dispatchEvent(new Event('input', { bubbles: true }));
-  el.dispatchEvent(new Event('change', { bubbles: true }));
+// Fill a React-controlled input/textarea with text.
+// Tries execCommand first (most reliable for React), falls back to native setter.
+function fillInput(el, value) {
+  el.focus();
+
+  // Select all existing text
+  el.setSelectionRange ? el.setSelectionRange(0, el.value.length) : null;
+
+  // execCommand insertText triggers the browser's native input pipeline,
+  // which React's synthetic event system picks up correctly.
+  const inserted = document.execCommand('insertText', false, value);
+
+  if (!inserted || el.value !== value) {
+    // Fallback: native prototype setter + input event
+    const proto = el.tagName === 'TEXTAREA'
+      ? window.HTMLTextAreaElement.prototype
+      : window.HTMLInputElement.prototype;
+    const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+    nativeSetter.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
-// Find the first empty term input in the editor
-function findEmptyTermInput() {
+// Return ALL inputs matching term-like selectors
+function findTermInputs() {
   const selectors = [
     'textarea[placeholder*="Term"]',
     'textarea[placeholder*="term"]',
@@ -26,15 +38,24 @@ function findEmptyTermInput() {
   ];
   for (const sel of selectors) {
     const els = [...document.querySelectorAll(sel)];
-    const empty = els.find(el => !el.value.trim());
-    if (empty) return empty;
+    if (els.length) return els;
+  }
+  return [];
+}
+
+// Find the LAST empty term input (the newly added card row)
+function findLastEmptyTermInput() {
+  const all = findTermInputs();
+  // Walk from end to find first empty
+  for (let i = all.length - 1; i >= 0; i--) {
+    if (!all[i].value.trim()) return all[i];
   }
   return null;
 }
 
-// Find the definition input that corresponds to a given term input
+// Find the definition input paired with a given term input
 function findDefinitionInput(termEl) {
-  // Try within the same card row first
+  // Try within the same card row
   const row = termEl.closest(
     '[class*="Row"], [class*="Card"], [class*="card"], [class*="row"], li, [data-testid*="card"]'
   );
@@ -51,33 +72,36 @@ function findDefinitionInput(termEl) {
       if (def) return def;
     }
   }
-  // Fallback: the next textarea/text input after the term input
+  // Fallback: next textarea/text input in document order
   const allInputs = [...document.querySelectorAll('textarea, input[type="text"]')];
   const idx = allInputs.indexOf(termEl);
   return idx >= 0 ? allInputs[idx + 1] || null : null;
 }
 
-// Click the "Add card" button and wait for a new row to appear
+// Click the "Add card" button and wait for the new row to appear
 async function clickAddCard() {
   const buttons = [...document.querySelectorAll('button, [role="button"]')];
   const addBtn = buttons.find(btn =>
     /add\s*(a\s*)?card/i.test(btn.textContent.trim()) ||
     /\+\s*add/i.test(btn.textContent.trim())
   );
-  if (addBtn) {
-    addBtn.click();
-    await new Promise(r => setTimeout(r, 700));
-    return true;
+  if (!addBtn) return false;
+  const countBefore = findTermInputs().length;
+  addBtn.click();
+  // Wait until a new row appears (up to 1.5s)
+  for (let i = 0; i < 15; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    if (findTermInputs().length > countBefore) break;
   }
-  return false;
+  return true;
 }
 
 async function injectCard(term, definition) {
-  let termEl = findEmptyTermInput();
+  let termEl = findLastEmptyTermInput();
 
   if (!termEl) {
     const clicked = await clickAddCard();
-    if (clicked) termEl = findEmptyTermInput();
+    if (clicked) termEl = findLastEmptyTermInput();
   }
 
   if (!termEl) {
@@ -92,13 +116,11 @@ async function injectCard(term, definition) {
     return { success: false, error: 'Could not find the definition input.' };
   }
 
-  termEl.focus();
-  setReactInputValue(termEl, term);
+  fillInput(termEl, term);
+  // Small pause so React processes the term input before we move to definition
+  await new Promise(r => setTimeout(r, 80));
+  fillInput(defEl, definition);
 
-  defEl.focus();
-  setReactInputValue(defEl, definition);
-
-  // Return focus to term so the user can see what was filled
   termEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   return { success: true };
@@ -117,6 +139,5 @@ chrome.storage.local.get('quizletPending', (r) => {
   if (!r.quizletPending) return;
   const { term, definition } = r.quizletPending;
   chrome.storage.local.remove('quizletPending');
-  // Wait for editor to render
-  setTimeout(() => injectCard(term, definition), 1200);
+  setTimeout(() => injectCard(term, definition), 1500);
 });
