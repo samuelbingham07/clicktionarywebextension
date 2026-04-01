@@ -7,28 +7,35 @@ function isProseMirrorEmpty(el) {
   return !el.textContent.trim();
 }
 
-function fillProseMirror(el, value) {
-  el.focus();
-
-  // Place cursor inside the element
-  const selection = window.getSelection();
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  selection.removeAllRanges();
-  selection.addRange(range);
-
-  // ProseMirror handles beforeinput events with inputType 'insertText'
-  const beforeInput = new InputEvent('beforeinput', {
-    bubbles: true, cancelable: true,
-    inputType: 'insertText',
-    data: value
+// Inject and run code in the page's JS context (same world as ProseMirror)
+function injectIntoPage(fn, ...args) {
+  return new Promise((resolve) => {
+    const id = `_ct_${Date.now()}`;
+    window.addEventListener(id, (e) => resolve(e.detail), { once: true });
+    const script = document.createElement('script');
+    script.textContent = `(${fn.toString()})(${args.map(a => JSON.stringify(a)).join(',')}, '${id}');`;
+    document.documentElement.appendChild(script);
+    script.remove();
   });
-  el.dispatchEvent(beforeInput);
+}
 
-  if (!beforeInput.defaultPrevented) {
-    // Fallback: execCommand if ProseMirror didn't handle it
+function fillProseMirror(el, value) {
+  // Mark the element so the page-context script can find it
+  const marker = `_ct_pm_${Date.now()}`;
+  el.setAttribute('data-ct-marker', marker);
+  injectIntoPage(function(marker, value, eventId) {
+    const el = document.querySelector(`[data-ct-marker="${marker}"]`);
+    if (!el) { window.dispatchEvent(new CustomEvent(eventId, { detail: false })); return; }
+    el.removeAttribute('data-ct-marker');
+    el.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
     document.execCommand('insertText', false, value);
-  }
+    window.dispatchEvent(new CustomEvent(eventId, { detail: true }));
+  }, marker, value);
 }
 
 function findAllTermInputs() {
