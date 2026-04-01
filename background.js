@@ -312,25 +312,18 @@ function isQuizletEditorTab(url) {
 }
 
 // Runs in the page's MAIN world — same JS context as ProseMirror
-function quizletFillCard(term, definition) {
-  function isEmpty(el) { return !el.textContent.trim(); }
+// Must be declared async so chrome.scripting.executeScript awaits the result
+async function quizletFillCard(term, definition) {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
 
-  function allTermInputs() {
-    return [...document.querySelectorAll('[pm-placeholder]')].filter(el =>
-      !el.getAttribute('pm-placeholder').toLowerCase().includes('definition')
-    );
+  function allPm() {
+    return [...document.querySelectorAll('[pm-placeholder]')];
   }
-
-  function findDef(termEl) {
-    const all = [...document.querySelectorAll('[pm-placeholder]')];
-    const idx = all.indexOf(termEl);
-    for (let i = idx + 1; i < all.length; i++) {
-      if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
-    }
-    for (let i = idx - 1; i >= 0; i--) {
-      if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
-    }
-    return null;
+  function isTermField(el) {
+    return !el.getAttribute('pm-placeholder').toLowerCase().includes('definition');
+  }
+  function isEmpty(el) {
+    return !el.textContent.trim();
   }
 
   function fill(el, value) {
@@ -340,44 +333,81 @@ function quizletFillCard(term, definition) {
     range.selectNodeContents(el);
     sel.removeAllRanges();
     sel.addRange(range);
-    document.execCommand('insertText', false, value);
-  }
-
-  function clickAddCard() {
-    const btn = [...document.querySelectorAll('button')].find(b => /add\s*(a\s*)?card/i.test(b.textContent));
-    if (btn) btn.click();
-    return !!btn;
-  }
-
-  return new Promise(async (resolve) => {
-    let termEl = allTermInputs().reverse().find(isEmpty);
-
-    if (!termEl) {
-      clickAddCard();
-      for (let i = 0; i < 20; i++) {
-        await new Promise(r => setTimeout(r, 100));
-        termEl = allTermInputs().reverse().find(isEmpty);
-        if (termEl) break;
-      }
+    // Dispatch beforeinput — ProseMirror's primary input handler
+    el.dispatchEvent(new InputEvent('beforeinput', {
+      bubbles: true, cancelable: true, inputType: 'insertText', data: value
+    }));
+    // Also try execCommand as fallback
+    if (!el.textContent.trim()) {
+      document.execCommand('insertText', false, value);
     }
+  }
 
-    if (!termEl) return resolve({ success: false, error: 'No empty term slot found.' });
+  // Find the last empty term field
+  let termEl = allPm().filter(isTermField).reverse().find(isEmpty);
 
-    fill(termEl, term);
+  if (!termEl) {
+    // Click Add card
+    const btn = [...document.querySelectorAll('button')].find(b => /add\s*(a\s*)?card/i.test(b.textContent));
+    if (!btn) return { success: false, error: 'No "Add card" button found.' };
+    const before = allPm().filter(isTermField).length;
+    btn.click();
+    for (let i = 0; i < 20; i++) {
+      await wait(100);
+      if (allPm().filter(isTermField).length > before) break;
+    }
+    termEl = allPm().filter(isTermField).reverse().find(isEmpty);
+  }
 
-    // Wait for definition field to appear
-    let defEl = null;
+  if (!termEl) return { success: false, error: 'No empty term slot found.' };
+
+  console.log('[Clicktionary MAIN] termEl placeholder:', termEl.getAttribute('pm-placeholder'));
+  fill(termEl, term);
+  await wait(200);
+  console.log('[Clicktionary MAIN] termEl content after fill:', termEl.textContent);
+
+  // Find paired definition field — it's always adjacent to the term in the same card row
+  const all = allPm();
+  const idx = all.indexOf(termEl);
+  console.log('[Clicktionary MAIN] termEl index:', idx, 'of', all.length, '| placeholders:', all.map(e => e.getAttribute('pm-placeholder')));
+
+  // Look forward first, then backward for the nearest definition field
+  let defEl = null;
+  for (let i = idx + 1; i < all.length; i++) {
+    if (!isTermField(all[i])) { defEl = all[i]; break; }
+  }
+  if (!defEl) {
+    for (let i = idx - 1; i >= 0; i--) {
+      if (!isTermField(all[i])) { defEl = all[i]; break; }
+    }
+  }
+
+  // If still not found, wait for it to render
+  if (!defEl) {
     for (let i = 0; i < 15; i++) {
-      await new Promise(r => setTimeout(r, 100));
-      defEl = findDef(termEl);
+      await wait(100);
+      const updated = allPm();
+      const newIdx = updated.indexOf(termEl);
+      for (let j = newIdx + 1; j < updated.length; j++) {
+        if (!isTermField(updated[j])) { defEl = updated[j]; break; }
+      }
+      if (!defEl) {
+        for (let j = newIdx - 1; j >= 0; j--) {
+          if (!isTermField(updated[j])) { defEl = updated[j]; break; }
+        }
+      }
       if (defEl) break;
     }
+  }
 
-    if (!defEl) return resolve({ success: false, error: 'Definition field did not appear.' });
+  if (!defEl) return { success: false, error: 'Definition field not found.' };
 
-    fill(defEl, definition);
-    resolve({ success: true });
-  });
+  console.log('[Clicktionary MAIN] defEl placeholder:', defEl.getAttribute('pm-placeholder'));
+  fill(defEl, definition);
+  await wait(200);
+  console.log('[Clicktionary MAIN] defEl content after fill:', defEl.textContent);
+
+  return { success: true };
 }
 
 async function sendToQuizlet(term, definition) {
