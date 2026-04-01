@@ -1,21 +1,23 @@
 // Clicktionary — Quizlet integration content script
 // Injected into quizlet.com set editor pages
-// Listens for INJECT_QUIZLET_CARD messages from background.js
 
-// Fill a React-controlled input/textarea with text.
-// Tries execCommand first (most reliable for React), falls back to native setter.
+// Fill a React-controlled input, textarea, or contenteditable element
 function fillInput(el, value) {
   el.focus();
 
-  // Select all existing text
-  el.setSelectionRange ? el.setSelectionRange(0, el.value.length) : null;
+  if (el.getAttribute('contenteditable') === 'true' || el.isContentEditable) {
+    // contenteditable: select all then insert
+    document.execCommand('selectAll', false, null);
+    document.execCommand('insertText', false, value);
+    return;
+  }
 
-  // execCommand insertText triggers the browser's native input pipeline,
-  // which React's synthetic event system picks up correctly.
+  // input / textarea: try execCommand first (works with React's synthetic events)
+  if (el.setSelectionRange) el.setSelectionRange(0, el.value.length);
   const inserted = document.execCommand('insertText', false, value);
 
   if (!inserted || el.value !== value) {
-    // Fallback: native prototype setter + input event
+    // Fallback: native prototype setter
     const proto = el.tagName === 'TEXTAREA'
       ? window.HTMLTextAreaElement.prototype
       : window.HTMLInputElement.prototype;
@@ -26,85 +28,117 @@ function fillInput(el, value) {
   }
 }
 
-// Return ALL inputs matching term-like selectors
-function findTermInputs() {
-  const selectors = [
-    'textarea[placeholder*="Term"]',
-    'textarea[placeholder*="term"]',
-    'input[placeholder*="Term"]',
-    'input[placeholder*="term"]',
-    '[aria-label*="Term"]',
-    '[data-testid*="term"]',
-  ];
+// All selectors to try for term inputs — includes contenteditable
+const TERM_SELECTORS = [
+  'textarea[placeholder*="Term"]',
+  'textarea[placeholder*="term"]',
+  'input[placeholder*="Term"]',
+  'input[placeholder*="term"]',
+  '[aria-label*="Term"]',
+  '[data-testid*="term"]',
+  '[contenteditable="true"][aria-label*="Term"]',
+  '[contenteditable="true"][aria-label*="term"]',
+  '[contenteditable="true"][placeholder*="Term"]',
+  '[contenteditable="true"][placeholder*="term"]',
+];
+
+const DEF_SELECTORS = [
+  'textarea[placeholder*="Definition"]',
+  'textarea[placeholder*="definition"]',
+  'input[placeholder*="Definition"]',
+  'input[placeholder*="definition"]',
+  '[aria-label*="Definition"]',
+  '[aria-label*="definition"]',
+  '[contenteditable="true"][aria-label*="Definition"]',
+  '[contenteditable="true"][aria-label*="definition"]',
+  '[contenteditable="true"][placeholder*="Definition"]',
+  '[contenteditable="true"][placeholder*="definition"]',
+];
+
+function findAll(selectors) {
   for (const sel of selectors) {
     const els = [...document.querySelectorAll(sel)];
-    if (els.length) return els;
-  }
-  return [];
-}
-
-// Find the LAST empty term input (the newly added card row)
-function findLastEmptyTermInput() {
-  const all = findTermInputs();
-  // Walk from end to find first empty
-  for (let i = all.length - 1; i >= 0; i--) {
-    if (!all[i].value.trim()) return all[i];
+    if (els.length) return { sel, els };
   }
   return null;
 }
 
-// Find the definition input paired with a given term input
+function isEmpty(el) {
+  return !(el.value || el.textContent || '').trim();
+}
+
+function findLastEmptyTermInput() {
+  const found = findAll(TERM_SELECTORS);
+  if (!found) {
+    console.log('[Clicktionary] No term inputs found. Tried:', TERM_SELECTORS);
+    return null;
+  }
+  console.log(`[Clicktionary] Found ${found.els.length} term inputs via "${found.sel}"`);
+  for (let i = found.els.length - 1; i >= 0; i--) {
+    if (isEmpty(found.els[i])) return found.els[i];
+  }
+  return null;
+}
+
 function findDefinitionInput(termEl) {
-  // Try within the same card row
+  // Try within the same card row first
   const row = termEl.closest(
     '[class*="Row"], [class*="Card"], [class*="card"], [class*="row"], li, [data-testid*="card"]'
   );
   if (row) {
-    const defSelectors = [
-      'textarea[placeholder*="Definition"]',
-      'textarea[placeholder*="definition"]',
-      'input[placeholder*="Definition"]',
-      'input[placeholder*="definition"]',
-      '[aria-label*="Definition"]',
-    ];
-    for (const sel of defSelectors) {
-      const def = row.querySelector(sel);
-      if (def) return def;
+    const found = findAll(DEF_SELECTORS.map(s => s)); // search within row
+    if (found) {
+      const inRow = found.els.find(el => row.contains(el));
+      if (inRow) return inRow;
     }
   }
-  // Fallback: next textarea/text input in document order
-  const allInputs = [...document.querySelectorAll('textarea, input[type="text"]')];
-  const idx = allInputs.indexOf(termEl);
-  return idx >= 0 ? allInputs[idx + 1] || null : null;
+
+  // Fallback: next focusable input/textarea/contenteditable in document order
+  const all = [...document.querySelectorAll(
+    'textarea, input[type="text"], [contenteditable="true"]'
+  )];
+  const idx = all.indexOf(termEl);
+  console.log(`[Clicktionary] Term el at index ${idx} of ${all.length} inputs`);
+  return idx >= 0 ? all[idx + 1] || null : null;
 }
 
-// Click the "Add card" button and wait for the new row to appear
 async function clickAddCard() {
   const buttons = [...document.querySelectorAll('button, [role="button"]')];
   const addBtn = buttons.find(btn =>
     /add\s*(a\s*)?card/i.test(btn.textContent.trim()) ||
     /\+\s*add/i.test(btn.textContent.trim())
   );
-  if (!addBtn) return false;
-  const countBefore = findTermInputs().length;
-  addBtn.click();
-  // Wait until a new row appears (up to 1.5s)
-  for (let i = 0; i < 15; i++) {
-    await new Promise(r => setTimeout(r, 100));
-    if (findTermInputs().length > countBefore) break;
+  if (!addBtn) {
+    console.log('[Clicktionary] No "Add card" button found');
+    return false;
   }
-  return true;
+  const countBefore = findAll(TERM_SELECTORS)?.els.length || 0;
+  console.log(`[Clicktionary] Clicking "Add card", currently ${countBefore} term inputs`);
+  addBtn.click();
+  for (let i = 0; i < 20; i++) {
+    await new Promise(r => setTimeout(r, 100));
+    const countAfter = findAll(TERM_SELECTORS)?.els.length || 0;
+    if (countAfter > countBefore) {
+      console.log(`[Clicktionary] New row appeared (${countAfter} inputs now)`);
+      return true;
+    }
+  }
+  console.log('[Clicktionary] Row count did not increase after clicking Add card');
+  return true; // clicked but count didn't change — proceed anyway
 }
 
 async function injectCard(term, definition) {
+  console.log(`[Clicktionary] Injecting: "${term}" / "${definition}"`);
+
   let termEl = findLastEmptyTermInput();
 
   if (!termEl) {
-    const clicked = await clickAddCard();
-    if (clicked) termEl = findLastEmptyTermInput();
+    await clickAddCard();
+    termEl = findLastEmptyTermInput();
   }
 
   if (!termEl) {
+    console.log('[Clicktionary] Still no term input after Add card click');
     return {
       success: false,
       error: 'Could not find a term input. Make sure you are on a Quizlet set editor page (quizlet.com/create-set or a set edit page).'
@@ -113,16 +147,18 @@ async function injectCard(term, definition) {
 
   const defEl = findDefinitionInput(termEl);
   if (!defEl) {
+    console.log('[Clicktionary] Could not find definition input');
     return { success: false, error: 'Could not find the definition input.' };
   }
 
+  console.log('[Clicktionary] Filling term:', termEl.tagName, termEl.getAttribute('aria-label') || termEl.placeholder || '');
   fillInput(termEl, term);
-  // Small pause so React processes the term input before we move to definition
   await new Promise(r => setTimeout(r, 80));
+
+  console.log('[Clicktionary] Filling definition:', defEl.tagName, defEl.getAttribute('aria-label') || defEl.placeholder || '');
   fillInput(defEl, definition);
 
   termEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
   return { success: true };
 }
 
@@ -133,8 +169,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// On load, check if there's a pending card queued by background.js
-// (used when a new tab was opened to handle the card)
 chrome.storage.local.get('quizletPending', (r) => {
   if (!r.quizletPending) return;
   const { term, definition } = r.quizletPending;
