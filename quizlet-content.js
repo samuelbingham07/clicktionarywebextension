@@ -100,10 +100,26 @@ async function injectCard(term, definition) {
     return { success: false, error: 'Could not find the definition input.' };
   }
 
-  console.log('[Clicktionary] Filling term and definition');
+  console.log('[Clicktionary] Filling term');
   fillProseMirror(termEl, term);
-  await new Promise(r => setTimeout(r, 80));
-  fillProseMirror(defEl, definition);
+
+  // Wait for Quizlet to render the definition field (it may appear after term is focused)
+  let defEl2 = defEl;
+  if (!defEl2) {
+    for (let i = 0; i < 15; i++) {
+      await new Promise(r => setTimeout(r, 100));
+      defEl2 = findDefinitionInput(termEl);
+      if (defEl2) break;
+    }
+  }
+
+  if (!defEl2) {
+    console.log('[Clicktionary] Definition field never appeared');
+    return { success: false, error: 'Could not find the definition input.' };
+  }
+
+  console.log('[Clicktionary] Filling definition');
+  fillProseMirror(defEl2, definition);
 
   termEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   return { success: true };
