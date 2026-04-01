@@ -121,35 +121,56 @@ const defCache = new Map();
 // ── Merriam-Webster Spanish-English Dictionary (Spanish only) ────────────────
 const MW_SPANISH_KEY = '5caf730b-006d-45c5-99ed-6a3c136216cc';
 
+// Strip attached clitic pronouns from Spanish verb forms so we can look up
+// the base verb. Clitics attach to infinitives, gerunds, and imperatives.
+// e.g. explicarme → explicar, diciéndote → diciendo, dámelo → da
+const CLITIC_RE = /(?:me|te|se|nos|os|le|les|lo|la|los|las){1,2}$/i;
+const VERB_STEM_RE = /(?:ar|er|ir|arse|erse|irse|ando|iendo|ándome|iéndome)$/i;
+
+function stripClitics(word) {
+  const w = word.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents for matching
+  const stripped = w.replace(CLITIC_RE, '');
+  if (stripped === w || stripped.length < 2) return null;
+  // Only return if what's left looks like a verb form
+  return VERB_STEM_RE.test(stripped) ? stripped : null;
+}
+
+async function mwLookup(word) {
+  const r = await fetchWithTimeout(
+    `https://www.dictionaryapi.com/api/v3/references/spanish/json/${encodeURIComponent(word)}?key=${MW_SPANISH_KEY}`,
+    3000
+  );
+  if (!r.ok) return null;
+  const data = await r.json();
+  if (!data?.length || typeof data[0] === 'string') return null;
+
+  const entry = data[0];
+  const pos = entry.fl || '';
+  const gram = entry.gram || '';
+  const defs = entry.shortdef || [];
+  const infinitive = entry.cxs?.[0]?.cxtis?.[0]?.cxt || null;
+
+  if (!defs.length && !infinitive) return null;
+  return { pos, gram, infinitive, meanings: defs.map(d => ({ pos, text: d })), example: '' };
+}
+
 async function fetchMerriamWebsterDefinition(word) {
   try {
-    const r = await fetchWithTimeout(
-      `https://www.dictionaryapi.com/api/v3/references/spanish/json/${encodeURIComponent(word.toLowerCase())}?key=${MW_SPANISH_KEY}`,
-      3000
-    );
-    if (!r.ok) return null;
-    const data = await r.json();
+    const clean = word.toLowerCase();
 
-    // Array of strings = no exact match (just suggestions)
-    if (!data?.length || typeof data[0] === 'string') return null;
+    // 1. Try exact word
+    const exact = await mwLookup(clean);
+    if (exact) return exact;
 
-    const entry = data[0];
-    const pos = entry.fl || '';
-    const gram = entry.gram || ''; // e.g. "masculine", "feminine"
-    const defs = entry.shortdef || [];
+    // 2. Try stripping clitics and looking up the base verb
+    const base = stripClitics(clean);
+    if (base && base !== clean) {
+      const result = await mwLookup(base);
+      if (result) return { ...result, baseForm: base };
+    }
 
-    // Conjugated/inflected forms cross-reference their infinitive via cxs
-    const infinitive = entry.cxs?.[0]?.cxtis?.[0]?.cxt || null;
-
-    if (!defs.length && !infinitive) return null;
-
-    return {
-      pos,
-      gram,
-      infinitive,
-      meanings: defs.map(d => ({ pos, text: d })),
-      example: ''
-    };
+    return null;
   } catch (_) {
     return null;
   }
@@ -415,9 +436,10 @@ async function handleSelection(myId) {
 
     const { dict } = def;
     if (dict) {
-      // Part of speech + gender (e.g. "noun · masculine")
+      // Part of speech + gender (e.g. "noun · masculine"), with base form if clitics stripped
       const posLabel = [dict.pos, dict.gram].filter(Boolean).join(' · ');
-      t.querySelector('.ct-pos').textContent = posLabel ? `(${posLabel})` : '';
+      const baseNote = dict.baseForm ? ` · from ${dict.baseForm}` : '';
+      t.querySelector('.ct-pos').textContent = posLabel ? `(${posLabel}${baseNote})` : '';
 
       // For conjugated verbs MW returns the infinitive instead of definitions
       if (dict.infinitive && !dict.meanings?.length) {
