@@ -49,15 +49,16 @@ function findLastEmptyTermInput() {
 }
 
 function findDefinitionInput(termEl) {
-  // Walk forward in document order to find the next definition field
   const all = [...document.querySelectorAll('[pm-placeholder]')];
   const idx = all.indexOf(termEl);
   console.log(`[Clicktionary] Term at index ${idx} of ${all.length} pm-placeholder els`);
-  // The definition input immediately follows the term input in the DOM
+
+  // Try forward first, then backward — Quizlet's DOM order varies
   for (let i = idx + 1; i < all.length; i++) {
-    if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) {
-      return all[i];
-    }
+    if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
+  }
+  for (let i = idx - 1; i >= 0; i--) {
+    if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
   }
   return null;
 }
