@@ -9,7 +9,13 @@ function isProseMirrorEmpty(el) {
 
 function fillProseMirror(el, value) {
   el.focus();
-  document.execCommand('selectAll');
+  // Select only the content inside this specific element, not the whole page
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  // ProseMirror listens to beforeinput/input events — insertText triggers both
   document.execCommand('insertText', false, value);
 }
 
