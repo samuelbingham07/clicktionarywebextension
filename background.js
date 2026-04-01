@@ -319,12 +319,12 @@ async function quizletFillCard(term, definition) {
   function allPm() {
     return [...document.querySelectorAll('[pm-placeholder]')];
   }
-  function isTermField(el) {
-    return !el.getAttribute('pm-placeholder').toLowerCase().includes('definition');
+  function isDefinitionField(el) {
+    const p = el.getAttribute('pm-placeholder').toLowerCase();
+    return p.includes('definition') || p.includes('english');
   }
-  function isEmpty(el) {
-    return !el.textContent.trim();
-  }
+  function isTermField(el) { return !isDefinitionField(el); }
+  function isEmpty(el) { return !el.textContent.trim(); }
 
   function fill(el, value) {
     el.focus();
@@ -361,44 +361,27 @@ async function quizletFillCard(term, definition) {
 
   if (!termEl) return { success: false, error: 'No empty term slot found.' };
 
+  // Mark the card's parent so we can find the definition field even after React re-renders
+  const card = termEl.closest('li, [class*="TermRow"], [class*="SetEditorRow"]') || termEl.parentElement;
+  card.setAttribute('data-ct-card', 'true');
+
   console.log('[Clicktionary MAIN] termEl placeholder:', termEl.getAttribute('pm-placeholder'));
   fill(termEl, term);
-  await wait(200);
-  console.log('[Clicktionary MAIN] termEl content after fill:', termEl.textContent);
+  await wait(300);
 
-  // Find paired definition field — it's always adjacent to the term in the same card row
-  const all = allPm();
-  const idx = all.indexOf(termEl);
-  console.log('[Clicktionary MAIN] termEl index:', idx, 'of', all.length, '| placeholders:', all.map(e => e.getAttribute('pm-placeholder')));
-
-  // Look forward first, then backward for the nearest definition field
+  // Find definition field within the same card by marker
   let defEl = null;
-  for (let i = idx + 1; i < all.length; i++) {
-    if (!isTermField(all[i])) { defEl = all[i]; break; }
-  }
-  if (!defEl) {
-    for (let i = idx - 1; i >= 0; i--) {
-      if (!isTermField(all[i])) { defEl = all[i]; break; }
+  for (let i = 0; i < 15; i++) {
+    await wait(100);
+    const markedCard = document.querySelector('[data-ct-card]');
+    if (markedCard) {
+      defEl = [...markedCard.querySelectorAll('[pm-placeholder]')].find(isDefinitionField);
     }
+    // Fallback: scan all pm fields
+    if (!defEl) defEl = allPm().find(el => isDefinitionField(el) && isEmpty(el));
+    if (defEl) break;
   }
-
-  // If still not found, wait for it to render
-  if (!defEl) {
-    for (let i = 0; i < 15; i++) {
-      await wait(100);
-      const updated = allPm();
-      const newIdx = updated.indexOf(termEl);
-      for (let j = newIdx + 1; j < updated.length; j++) {
-        if (!isTermField(updated[j])) { defEl = updated[j]; break; }
-      }
-      if (!defEl) {
-        for (let j = newIdx - 1; j >= 0; j--) {
-          if (!isTermField(updated[j])) { defEl = updated[j]; break; }
-        }
-      }
-      if (defEl) break;
-    }
-  }
+  if (card) card.removeAttribute('data-ct-card');
 
   if (!defEl) return { success: false, error: 'Definition field not found.' };
 
