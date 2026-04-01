@@ -36,7 +36,8 @@
         "<all_urls>"
       ],
       "exclude_matches": [
-        "https://samuelbingham07.github.io/*"
+        "https://samuelbingham07.github.io/*",
+        "https://quizlet.com/*"
       ],
       "js": [
         "content.js"
@@ -58,7 +59,8 @@
     {
       "matches": [
         "https://quizlet.com/create-set*",
-        "https://quizlet.com/*/edit*"
+        "https://quizlet.com/*/edit*",
+        "https://quizlet.com/*/autosaved*"
       ],
       "js": [
         "quizlet-content.js"
