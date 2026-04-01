@@ -311,25 +311,98 @@ function isQuizletEditorTab(url) {
   return url && QUIZLET_EDITOR_PATTERNS.some(p => p.test(url));
 }
 
+// Runs in the page's MAIN world — same JS context as ProseMirror
+function quizletFillCard(term, definition) {
+  function isEmpty(el) { return !el.textContent.trim(); }
+
+  function allTermInputs() {
+    return [...document.querySelectorAll('[pm-placeholder]')].filter(el =>
+      !el.getAttribute('pm-placeholder').toLowerCase().includes('definition')
+    );
+  }
+
+  function findDef(termEl) {
+    const all = [...document.querySelectorAll('[pm-placeholder]')];
+    const idx = all.indexOf(termEl);
+    for (let i = idx + 1; i < all.length; i++) {
+      if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
+    }
+    for (let i = idx - 1; i >= 0; i--) {
+      if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
+    }
+    return null;
+  }
+
+  function fill(el, value) {
+    el.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('insertText', false, value);
+  }
+
+  function clickAddCard() {
+    const btn = [...document.querySelectorAll('button')].find(b => /add\s*(a\s*)?card/i.test(b.textContent));
+    if (btn) btn.click();
+    return !!btn;
+  }
+
+  return new Promise(async (resolve) => {
+    let termEl = allTermInputs().reverse().find(isEmpty);
+
+    if (!termEl) {
+      clickAddCard();
+      for (let i = 0; i < 20; i++) {
+        await new Promise(r => setTimeout(r, 100));
+        termEl = allTermInputs().reverse().find(isEmpty);
+        if (termEl) break;
+      }
+    }
+
+    if (!termEl) return resolve({ success: false, error: 'No empty term slot found.' });
+
+    fill(termEl, term);
+
+    // Wait for definition field to appear
+    let defEl = null;
+    for (let i = 0; i < 15; i++) {
+      await new Promise(r => setTimeout(r, 100));
+      defEl = findDef(termEl);
+      if (defEl) break;
+    }
+
+    if (!defEl) return resolve({ success: false, error: 'Definition field did not appear.' });
+
+    fill(defEl, definition);
+    resolve({ success: true });
+  });
+}
+
 async function sendToQuizlet(term, definition) {
-  // Look for an already-open Quizlet editor tab
   const tabs = await chrome.tabs.query({ url: 'https://quizlet.com/*' });
   const editorTab = tabs.find(t => isQuizletEditorTab(t.url));
 
   if (editorTab) {
     await chrome.tabs.update(editorTab.id, { active: true });
     await chrome.windows.update(editorTab.windowId, { focused: true });
+    // Small delay to let the tab come into focus before scripting
+    await new Promise(r => setTimeout(r, 300));
     try {
-      const result = await chrome.tabs.sendMessage(editorTab.id, {
-        type: 'INJECT_QUIZLET_CARD', term, definition
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: editorTab.id },
+        world: 'MAIN',
+        func: quizletFillCard,
+        args: [term, definition]
       });
-      return result;
+      return results[0]?.result || { success: false, error: 'No result from script.' };
     } catch (e) {
-      return { success: false, error: 'Could not reach Quizlet tab. Try reloading the Quizlet page.' };
+      return { success: false, error: e.message };
     }
   }
 
-  // No editor tab open — store the pending card and open create-set
+  // No editor tab — open create-set and queue the card
   await chrome.storage.local.set({ quizletPending: { term, definition } });
   chrome.tabs.create({ url: 'https://quizlet.com/create-set' });
   return { success: true, opened: true };

@@ -8,7 +8,8 @@
     "storage",
     "activeTab",
     "identity",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://incvqtbkfntzdvbingqv.supabase.co/*",
