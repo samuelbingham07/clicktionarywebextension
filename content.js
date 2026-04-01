@@ -468,26 +468,29 @@ async function sendToQuizlet() {
   btn.textContent = '...';
   btn.disabled = true;
 
-  chrome.runtime.sendMessage(
-    { type: 'SEND_TO_QUIZLET', term: lastWord, definition },
-    (response) => {
-      if (response?.success) {
-        btn.textContent = '✓';
-        setTimeout(() => {
-          btn.textContent = 'Q';
-          btn.disabled = false;
-        }, 2000);
-      } else {
-        btn.textContent = '✕';
-        btn.title = response?.error || 'Failed to send to Quizlet';
-        setTimeout(() => {
-          btn.textContent = 'Q';
-          btn.title = 'Send to Quizlet';
-          btn.disabled = false;
-        }, 2500);
-      }
-    }
-  );
+  let response;
+  try {
+    response = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { type: 'SEND_TO_QUIZLET', term: lastWord, definition },
+        r => chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(r)
+      );
+    });
+  } catch (_) {
+    btn.textContent = '↺';
+    btn.title = 'Reload this page to reconnect the extension, then try again.';
+    btn.disabled = false;
+    return;
+  }
+
+  if (response?.success) {
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = 'Q'; btn.disabled = false; }, 2000);
+  } else {
+    btn.textContent = '✕';
+    btn.title = response?.error || 'Failed to send to Quizlet';
+    setTimeout(() => { btn.textContent = 'Q'; btn.title = 'Send to Quizlet'; btn.disabled = false; }, 2500);
+  }
 }
 
 // ── Close on outside click + speculative prefetch ───────────────────────────
