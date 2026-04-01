@@ -159,18 +159,19 @@ async function fetchMerriamWebsterDefinition(word) {
   try {
     const clean = word.toLowerCase();
 
-    // 1. Try exact word
+    // 1. Try exact word in MW
     const exact = await mwLookup(clean);
     if (exact) return exact;
 
-    // 2. Try stripping clitics and looking up the base verb
+    // 2. Try stripping clitics and looking up the base verb in MW
     const base = stripClitics(clean);
     if (base && base !== clean) {
       const result = await mwLookup(base);
       if (result) return { ...result, baseForm: base };
     }
 
-    return null;
+    // 3. MW came up empty — fall back to Wiktionary for broader coverage
+    return fetchWiktionaryDefinition(clean, 'es');
   } catch (_) {
     return null;
   }
