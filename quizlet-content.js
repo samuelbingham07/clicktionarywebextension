@@ -32,9 +32,11 @@ function fillProseMirror(el, value) {
 }
 
 function findAllTermInputs() {
-  return [...document.querySelectorAll(
-    'div.ProseMirror[pm-placeholder="Enter term"], [aria-placeholder="Enter term"]'
-  )];
+  // Quizlet uses the target language as placeholder (e.g. "Enter Spanish", "Enter French")
+  // Select all pm-placeholder inputs that are NOT the definition field
+  return [...document.querySelectorAll('[pm-placeholder]')].filter(el =>
+    !el.getAttribute('pm-placeholder').toLowerCase().includes('definition')
+  );
 }
 
 function findLastEmptyTermInput() {
@@ -47,20 +49,17 @@ function findLastEmptyTermInput() {
 }
 
 function findDefinitionInput(termEl) {
-  // Each card row contains one term and one definition ProseMirror
-  const row = termEl.closest('[class*="SetEditorRow"], [class*="SetEditor-term"], [class*="row"], [class*="card"], li');
-  if (row) {
-    const def = row.querySelector(
-      'div.ProseMirror[pm-placeholder="Enter definition"], [aria-placeholder="Enter definition"]'
-    );
-    if (def) return def;
-  }
-
-  // Fallback: next ProseMirror in document order
-  const all = [...document.querySelectorAll('div.ProseMirror[pm-placeholder], [aria-placeholder]')];
+  // Walk forward in document order to find the next definition field
+  const all = [...document.querySelectorAll('[pm-placeholder]')];
   const idx = all.indexOf(termEl);
-  console.log(`[Clicktionary] Term at index ${idx} of ${all.length} ProseMirror els`);
-  return idx >= 0 ? all[idx + 1] || null : null;
+  console.log(`[Clicktionary] Term at index ${idx} of ${all.length} pm-placeholder els`);
+  // The definition input immediately follows the term input in the DOM
+  for (let i = idx + 1; i < all.length; i++) {
+    if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) {
+      return all[i];
+    }
+  }
+  return null;
 }
 
 async function clickAddCard() {
