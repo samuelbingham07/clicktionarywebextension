@@ -118,63 +118,16 @@ function fetchWithTimeout(url, ms = 2000) {
 // ── Translation cache (in-memory; reset on extension reload) ────────────────
 const defCache = new Map();
 
-// ── Merriam-Webster Spanish-English Dictionary (Spanish only) ────────────────
-const MW_SPANISH_KEY = '5caf730b-006d-45c5-99ed-6a3c136216cc';
-
-// Strip attached clitic pronouns from Spanish verb forms so we can look up
-// the base verb. Clitics attach to infinitives, gerunds, and imperatives.
-// e.g. explicarme → explicar, diciéndote → diciendo, dámelo → da
+// ── Strip attached clitic pronouns for verb lookup fallback ─────────────────
+// e.g. explicarme → explicar, diciéndote → diciendo
 const CLITIC_RE = /(?:me|te|se|nos|os|le|les|lo|la|los|las){1,2}$/i;
-const VERB_STEM_RE = /(?:ar|er|ir|arse|erse|irse|ando|iendo|ándome|iéndome)$/i;
+const VERB_STEM_RE = /(?:ar|er|ir|arse|erse|irse|ando|iendo)$/i;
 
 function stripClitics(word) {
-  const w = word.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents for matching
+  const w = word.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const stripped = w.replace(CLITIC_RE, '');
   if (stripped === w || stripped.length < 2) return null;
-  // Only return if what's left looks like a verb form
   return VERB_STEM_RE.test(stripped) ? stripped : null;
-}
-
-async function mwLookup(word) {
-  const r = await fetchWithTimeout(
-    `https://www.dictionaryapi.com/api/v3/references/spanish/json/${encodeURIComponent(word)}?key=${MW_SPANISH_KEY}`,
-    3000
-  );
-  if (!r.ok) return null;
-  const data = await r.json();
-  if (!data?.length || typeof data[0] === 'string') return null;
-
-  const entry = data[0];
-  const pos = entry.fl || '';
-  const gram = entry.gram || '';
-  const defs = entry.shortdef || [];
-  const infinitive = entry.cxs?.[0]?.cxtis?.[0]?.cxt || null;
-
-  if (!defs.length && !infinitive) return null;
-  return { pos, gram, infinitive, meanings: defs.map(d => ({ pos, text: d })), example: '' };
-}
-
-async function fetchMerriamWebsterDefinition(word) {
-  try {
-    const clean = word.toLowerCase();
-
-    // 1. Try exact word in MW
-    const exact = await mwLookup(clean);
-    if (exact) return exact;
-
-    // 2. Try stripping clitics and looking up the base verb in MW
-    const base = stripClitics(clean);
-    if (base && base !== clean) {
-      const result = await mwLookup(base);
-      if (result) return { ...result, baseForm: base };
-    }
-
-    // 3. MW came up empty — fall back to Wiktionary for broader coverage
-    return fetchWiktionaryDefinition(clean, 'es');
-  } catch (_) {
-    return null;
-  }
 }
 
 // ── Fetch definition from Wiktionary for the original foreign word ───────────
@@ -267,10 +220,17 @@ async function fetchDefinition(word, langCode) {
       } catch (_) {}
       return null;
     }),
-    // Dictionary: MW for Spanish, Wiktionary for all other languages
-    langCode === 'es'
-      ? fetchMerriamWebsterDefinition(clean)
-      : fetchWiktionaryDefinition(clean, langCode)
+    // Dictionary: Wiktionary for all languages, clitic fallback for missed verb forms
+    (async () => {
+      const result = await fetchWiktionaryDefinition(clean, langCode);
+      if (result) return result;
+      const base = stripClitics(clean);
+      if (base && base !== clean) {
+        const baseResult = await fetchWiktionaryDefinition(base, langCode);
+        if (baseResult) return { ...baseResult, baseForm: base };
+      }
+      return null;
+    })()
   ]);
 
   if (!translation && !dict) {
