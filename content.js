@@ -38,6 +38,7 @@ function createTooltip() {
     <div class="ct-body">
       <div class="ct-loading">Looking up...</div>
       <div class="ct-result" style="display:none">
+        <div class="ct-translation"></div>
         <div class="ct-pos"></div>
         <div class="ct-definition"></div>
         <div class="ct-examples"></div>
@@ -117,7 +118,29 @@ function fetchWithTimeout(url, ms = 2000) {
 // ── Translation cache (in-memory; reset on extension reload) ────────────────
 const defCache = new Map();
 
-// ── Fetch translation (Lingva primary, MyMemory fallback) ───────────────────
+// ── Fetch English dictionary definition from dictionaryapi.dev (no key) ─────
+async function fetchDictionaryDefinition(englishWord) {
+  try {
+    const r = await fetchWithTimeout(
+      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(englishWord)}`,
+      3000
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+    const meaning = data?.[0]?.meanings?.[0];
+    if (!meaning) return null;
+    const def = meaning.definitions?.[0];
+    return {
+      pos: meaning.partOfSpeech || '',
+      definition: def?.definition || '',
+      example: def?.example || ''
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+// ── Fetch translation (Lingva primary, MyMemory fallback) then dictionary ────
 async function fetchDefinition(word, langCode) {
   const cacheKey = `${langCode}:${word.toLowerCase()}`;
   if (defCache.has(cacheKey)) return defCache.get(cacheKey);
@@ -137,31 +160,42 @@ async function fetchDefinition(word, langCode) {
     )
   ).catch(() => null);
 
-  if (lingva) {
-    const result = { word: clean, pos: '', definition: lingva, example: '' };
-    defCache.set(cacheKey, result);
-    return result;
+  let translation = lingva;
+
+  if (!translation) {
+    // 2. Fallback: MyMemory
+    try {
+      const mmCode = MYMEMORY_CODES[langCode] || langCode;
+      const r = await fetchWithTimeout(
+        `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
+      );
+      if (r.ok) {
+        const data = await r.json();
+        const t = data?.responseData?.translatedText;
+        if (t && t.toLowerCase() !== clean.toLowerCase()) translation = t;
+      }
+    } catch (_) {}
   }
 
-  // 2. Fallback: MyMemory
-  try {
-    const mmCode = MYMEMORY_CODES[langCode] || langCode;
-    const r = await fetchWithTimeout(
-      `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
-    );
-    if (r.ok) {
-      const data = await r.json();
-      const t = data?.responseData?.translatedText;
-      if (t && t.toLowerCase() !== clean.toLowerCase()) {
-        const result = { word: clean, pos: '', definition: t, example: '' };
-        defCache.set(cacheKey, result);
-        return result;
-      }
-    }
-  } catch (_) {}
+  if (!translation) {
+    defCache.set(cacheKey, null);
+    return null;
+  }
 
-  defCache.set(cacheKey, null);
-  return null;
+  // 3. Look up English dictionary definition for the translated word.
+  //    Use only the first word of multi-word translations (e.g. "to run" → "run")
+  const lookupWord = translation.replace(/^to\s+/i, '').split(/\s+/)[0];
+  const dict = await fetchDictionaryDefinition(lookupWord);
+
+  const result = {
+    word: clean,
+    translation,
+    pos: dict?.pos || '',
+    definition: dict?.definition || '',
+    example: dict?.example || ''
+  };
+  defCache.set(cacheKey, result);
+  return result;
 }
 
 // ── Detect if text could be in selected language ────────────────────────────
@@ -314,6 +348,7 @@ async function handleSelection(myId) {
   t.querySelector('.ct-loading').style.display = 'none';
 
   if (def) {
+    t.querySelector('.ct-translation').textContent = def.translation;
     t.querySelector('.ct-pos').textContent = def.pos ? `(${def.pos})` : '';
     t.querySelector('.ct-definition').textContent = def.definition;
     t.querySelector('.ct-examples').textContent = def.example ? `"${def.example}"` : '';

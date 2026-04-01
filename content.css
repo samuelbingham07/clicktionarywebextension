@@ -87,6 +87,13 @@
   to   { opacity: 1; }
 }
 
+.ct-translation {
+  font-size: 15px;
+  font-weight: bold;
+  color: #764c0f;
+  margin-bottom: 6px;
+}
+
 .ct-pos {
   font-size: 11px;
   color: #764c0f;
