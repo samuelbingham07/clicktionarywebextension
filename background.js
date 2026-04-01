@@ -304,6 +304,7 @@ async function updateWord(id, updates) {
 const QUIZLET_EDITOR_PATTERNS = [
   /^https:\/\/quizlet\.com\/create-set/,
   /^https:\/\/quizlet\.com\/[^/]+\/edit/,
+  /^https:\/\/quizlet\.com\/[^/]+\/autosaved/,
 ];
 
 function isQuizletEditorTab(url) {
