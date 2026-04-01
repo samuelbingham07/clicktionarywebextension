@@ -118,6 +118,43 @@ function fetchWithTimeout(url, ms = 2000) {
 // ── Translation cache (in-memory; reset on extension reload) ────────────────
 const defCache = new Map();
 
+// ── Merriam-Webster Spanish-English Dictionary (Spanish only) ────────────────
+const MW_SPANISH_KEY = '5caf730b-006d-45c5-99ed-6a3c136216cc';
+
+async function fetchMerriamWebsterDefinition(word) {
+  try {
+    const r = await fetchWithTimeout(
+      `https://www.dictionaryapi.com/api/v3/references/spanish/json/${encodeURIComponent(word.toLowerCase())}?key=${MW_SPANISH_KEY}`,
+      3000
+    );
+    if (!r.ok) return null;
+    const data = await r.json();
+
+    // Array of strings = no exact match (just suggestions)
+    if (!data?.length || typeof data[0] === 'string') return null;
+
+    const entry = data[0];
+    const pos = entry.fl || '';
+    const gram = entry.gram || ''; // e.g. "masculine", "feminine"
+    const defs = entry.shortdef || [];
+
+    // Conjugated/inflected forms cross-reference their infinitive via cxs
+    const infinitive = entry.cxs?.[0]?.cxtis?.[0]?.cxt || null;
+
+    if (!defs.length && !infinitive) return null;
+
+    return {
+      pos,
+      gram,
+      infinitive,
+      meanings: defs.map(d => ({ pos, text: d })),
+      example: ''
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 // ── Fetch definition from Wiktionary for the original foreign word ───────────
 // Looks up the word in English Wiktionary and extracts the section for
 // the target language, giving us pos, definition, and examples in English.
@@ -208,8 +245,10 @@ async function fetchDefinition(word, langCode) {
       } catch (_) {}
       return null;
     }),
-    // Dictionary: look up the original word directly in Wiktionary
-    fetchWiktionaryDefinition(clean, langCode)
+    // Dictionary: MW for Spanish, Wiktionary for all other languages
+    langCode === 'es'
+      ? fetchMerriamWebsterDefinition(clean)
+      : fetchWiktionaryDefinition(clean, langCode)
   ]);
 
   if (!translation && !dict) {
@@ -375,15 +414,21 @@ async function handleSelection(myId) {
     t.querySelector('.ct-translation').textContent = def.translation || '';
 
     const { dict } = def;
-    if (dict?.meanings?.length) {
-      // Show up to 3 numbered definitions grouped under their pos
-      let posShown = '';
-      const lines = dict.meanings.map((m, i) => {
-        const posLabel = m.pos !== posShown ? (posShown = m.pos, `(${m.pos}) `) : '';
-        return `${i + 1}. ${posLabel}${m.text}`;
-      });
-      t.querySelector('.ct-pos').textContent = '';
-      t.querySelector('.ct-definition').textContent = lines.join('\n');
+    if (dict) {
+      // Part of speech + gender (e.g. "noun · masculine")
+      const posLabel = [dict.pos, dict.gram].filter(Boolean).join(' · ');
+      t.querySelector('.ct-pos').textContent = posLabel ? `(${posLabel})` : '';
+
+      // For conjugated verbs MW returns the infinitive instead of definitions
+      if (dict.infinitive && !dict.meanings?.length) {
+        t.querySelector('.ct-definition').textContent = `→ ${dict.infinitive}`;
+      } else if (dict.meanings?.length) {
+        const lines = dict.meanings.map((m, i) => `${i + 1}. ${m.text}`);
+        t.querySelector('.ct-definition').textContent = lines.join('\n');
+      } else {
+        t.querySelector('.ct-definition').textContent = '';
+      }
+
       t.querySelector('.ct-examples').textContent = dict.example ? `"${dict.example}"` : '';
     } else {
       t.querySelector('.ct-pos').textContent = '';

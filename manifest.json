@@ -16,6 +16,7 @@
     "https://translate.plausibility.cloud/*",
     "https://api.mymemory.translated.net/*",
     "https://en.wiktionary.org/*",
+    "https://www.dictionaryapi.com/*",
     "https://quizlet.com/*"
   ],
   "background": {
