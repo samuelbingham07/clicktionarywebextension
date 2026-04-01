@@ -7,13 +7,15 @@
   "permissions": [
     "storage",
     "activeTab",
-    "identity"
+    "identity",
+    "tabs"
   ],
   "host_permissions": [
     "https://incvqtbkfntzdvbingqv.supabase.co/*",
     "https://lingva.ml/*",
     "https://translate.plausibility.cloud/*",
-    "https://api.mymemory.translated.net/*"
+    "https://api.mymemory.translated.net/*",
+    "https://quizlet.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -51,6 +53,15 @@
         "bridge.js"
       ],
       "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://quizlet.com/create-set*",
+        "https://quizlet.com/*/edit*"
+      ],
+      "js": [
+        "quizlet-content.js"
+      ]
     }
   ],
   "icons": {

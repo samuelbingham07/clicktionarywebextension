@@ -10,17 +10,18 @@ Live site: [samuelbingham07.github.io/clicktionarywebextension](https://samuelbi
 
 ```
 clicktionarywebextension/
-├── manifest.json       ← Extension config (MV3)
-├── content.js          ← Tooltip on text highlight, translation lookup, word saving
-├── content.css         ← Tooltip styles
-├── background.js       ← Service worker: auth, Supabase sync, word bank
-├── bridge.js           ← Content script injected into GitHub Pages site for auth sync
-├── popup.html          ← Extension popup UI
-├── popup.js            ← Popup logic: word list, language selector, auth
-├── privacy.html        ← Privacy policy (hosted on GitHub Pages)
-├── index.html          ← Word bank & practice site (hosted on GitHub Pages)
+├── manifest.json          ← Extension config (MV3)
+├── content.js             ← Tooltip on text highlight, translation lookup, word saving
+├── content.css            ← Tooltip styles
+├── background.js          ← Service worker: auth, Supabase sync, word bank, Quizlet routing
+├── quizlet-content.js     ← Content script injected into Quizlet editor pages for card injection
+├── bridge.js              ← Content script injected into GitHub Pages site for auth sync
+├── popup.html             ← Extension popup UI
+├── popup.js               ← Popup logic: word list, language selector, auth
+├── privacy.html           ← Privacy policy (hosted on GitHub Pages)
+├── index.html             ← Word bank & practice site (hosted on GitHub Pages)
 ├── icon16.png
-├── logo.png            ← Used as icon48 and favicon
+├── logo.png               ← Used as icon48 and favicon
 └── icon128.png
 ```
 

@@ -167,6 +167,25 @@
 .ct-add-btn:hover { background: #d4a000; transform: scale(1.03); }
 .ct-add-btn:active { transform: scale(0.98); }
 
+.ct-quizlet-btn {
+  background: #4255ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: 'Arial', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.15s, transform 0.1s;
+  display: none;
+  align-items: center;
+}
+.ct-quizlet-btn:hover { background: #3547e0; transform: scale(1.03); }
+.ct-quizlet-btn:active { transform: scale(0.98); }
+.ct-quizlet-btn:disabled { opacity: 0.7; cursor: default; transform: none; }
+
 .ct-saved-msg {
   font-size: 12px;
   color: #4caf50;

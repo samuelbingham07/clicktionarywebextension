@@ -299,6 +299,41 @@ async function updateWord(id, updates) {
   return true;
 }
 
+// ── Quizlet integration ───────────────────────────────────────────────────────
+
+const QUIZLET_EDITOR_PATTERNS = [
+  /^https:\/\/quizlet\.com\/create-set/,
+  /^https:\/\/quizlet\.com\/[^/]+\/edit/,
+];
+
+function isQuizletEditorTab(url) {
+  return url && QUIZLET_EDITOR_PATTERNS.some(p => p.test(url));
+}
+
+async function sendToQuizlet(term, definition) {
+  // Look for an already-open Quizlet editor tab
+  const tabs = await chrome.tabs.query({ url: 'https://quizlet.com/*' });
+  const editorTab = tabs.find(t => isQuizletEditorTab(t.url));
+
+  if (editorTab) {
+    await chrome.tabs.update(editorTab.id, { active: true });
+    await chrome.windows.update(editorTab.windowId, { focused: true });
+    try {
+      const result = await chrome.tabs.sendMessage(editorTab.id, {
+        type: 'INJECT_QUIZLET_CARD', term, definition
+      });
+      return result;
+    } catch (e) {
+      return { success: false, error: 'Could not reach Quizlet tab. Try reloading the Quizlet page.' };
+    }
+  }
+
+  // No editor tab open — store the pending card and open create-set
+  await chrome.storage.local.set({ quizletPending: { term, definition } });
+  chrome.tabs.create({ url: 'https://quizlet.com/create-set' });
+  return { success: true, opened: true };
+}
+
 // ── Message handler ───────────────────────────────────────────────────────────
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -363,6 +398,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ code, language: newLang });
       });
     });
+    return true;
+  }
+  if (message.type === 'SEND_TO_QUIZLET') {
+    sendToQuizlet(message.term, message.definition).then(sendResponse);
     return true;
   }
   if (message.type === 'ADD_WORD') {

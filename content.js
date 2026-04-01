@@ -50,12 +50,14 @@ function createTooltip() {
     </div>
     <div class="ct-footer">
       <button class="ct-add-btn">＋ Add to Word Bank</button>
+      <button class="ct-quizlet-btn" title="Send to Quizlet">Q</button>
       <span class="ct-saved-msg">✓ Saved!</span>
     </div>
   `;
   document.body.appendChild(el);
   el.querySelector('.ct-close').addEventListener('click', hideTooltip);
   el.querySelector('.ct-add-btn').addEventListener('click', () => addToWordBank());
+  el.querySelector('.ct-quizlet-btn').addEventListener('click', () => sendToQuizlet());
   el.querySelector('.ct-custom-input').addEventListener('input', (e) => {
     el.querySelector('.ct-add-btn').style.display = e.target.value.trim() ? 'inline-flex' : 'none';
   });
@@ -299,6 +301,7 @@ async function handleSelection(myId) {
   t.querySelector('.ct-error').style.display = 'none';
   t.querySelector('.ct-saved-msg').style.display = 'none';
   t.querySelector('.ct-add-btn').style.display = 'none';
+  t.querySelector('.ct-quizlet-btn').style.display = 'none';
 
   positionTooltip(rect);
 
@@ -316,6 +319,7 @@ async function handleSelection(myId) {
     t.querySelector('.ct-examples').textContent = def.example ? `"${def.example}"` : '';
     t.querySelector('.ct-result').style.display = 'block';
     t.querySelector('.ct-add-btn').style.display = 'inline-flex';
+    t.querySelector('.ct-quizlet-btn').style.display = 'inline-flex';
   } else {
     t.querySelector('.ct-custom-input').value = '';
     t.querySelector('.ct-error').style.display = 'block';
@@ -348,6 +352,40 @@ async function addToWordBank() {
       t.querySelector('.ct-saved-msg').style.display = 'inline';
     }
   });
+}
+
+// ── Send to Quizlet ─────────────────────────────────────────────────────────
+async function sendToQuizlet() {
+  if (!lastWord) return;
+  const t = getTooltip();
+  const customInput = t.querySelector('.ct-custom-input');
+  const definition = lastDefinition?.definition || customInput.value.trim();
+  if (!definition) return;
+
+  const btn = t.querySelector('.ct-quizlet-btn');
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  chrome.runtime.sendMessage(
+    { type: 'SEND_TO_QUIZLET', term: lastWord, definition },
+    (response) => {
+      if (response?.success) {
+        btn.textContent = '✓';
+        setTimeout(() => {
+          btn.textContent = 'Q';
+          btn.disabled = false;
+        }, 2000);
+      } else {
+        btn.textContent = '✕';
+        btn.title = response?.error || 'Failed to send to Quizlet';
+        setTimeout(() => {
+          btn.textContent = 'Q';
+          btn.title = 'Send to Quizlet';
+          btn.disabled = false;
+        }, 2500);
+      }
+    }
+  );
 }
 
 // ── Close on outside click + speculative prefetch ───────────────────────────
