@@ -44,7 +44,7 @@ function createTooltip() {
         <div class="ct-examples"></div>
       </div>
       <div class="ct-error" style="display:none">
-        <div class="ct-error-msg">Add failed — no definition found.</div>
+        <div class="ct-error-msg">No definition found.</div>
         <div class="ct-error-sub">Enter your own to save this word:</div>
         <input class="ct-custom-input" placeholder="Enter your own definition…" />
       </div>
@@ -227,7 +227,7 @@ async function fetchDefinition(word, langCode) {
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(data => {
             const t = data?.translation;
-            if (!t || t.toLowerCase() === clean.toLowerCase()) return Promise.reject();
+            if (!t) return Promise.reject();
             return t;
           })
       )
@@ -240,7 +240,7 @@ async function fetchDefinition(word, langCode) {
         if (r.ok) {
           const data = await r.json();
           const t = data?.responseData?.translatedText;
-          if (t && t.toLowerCase() !== clean.toLowerCase()) return t;
+          if (t) return t;
         }
       } catch (_) {}
       return null;
