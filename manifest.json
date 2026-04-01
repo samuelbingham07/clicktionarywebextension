@@ -15,7 +15,7 @@
     "https://lingva.ml/*",
     "https://translate.plausibility.cloud/*",
     "https://api.mymemory.translated.net/*",
-    "https://api.dictionaryapi.dev/*",
+    "https://en.wiktionary.org/*",
     "https://quizlet.com/*"
   ],
   "background": {

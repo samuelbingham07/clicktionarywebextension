@@ -118,82 +118,106 @@ function fetchWithTimeout(url, ms = 2000) {
 // ── Translation cache (in-memory; reset on extension reload) ────────────────
 const defCache = new Map();
 
-// ── Fetch English dictionary definition from dictionaryapi.dev (no key) ─────
-async function fetchDictionaryDefinition(englishWord) {
+// ── Fetch definition from Wiktionary for the original foreign word ───────────
+// Looks up the word in English Wiktionary and extracts the section for
+// the target language, giving us pos, definition, and examples in English.
+async function fetchWiktionaryDefinition(word, langCode) {
+  const WIKT_LANG = {
+    es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+    pt: 'Portuguese', ru: 'Russian', zh: 'Chinese', ja: 'Japanese',
+    ko: 'Korean', ar: 'Arabic'
+  };
+  const langName = WIKT_LANG[langCode];
+  if (!langName) return null;
+
   try {
     const r = await fetchWithTimeout(
-      `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(englishWord)}`,
+      `https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(word.toLowerCase())}`,
       3000
     );
     if (!r.ok) return null;
     const data = await r.json();
-    const meaning = data?.[0]?.meanings?.[0];
-    if (!meaning) return null;
-    const def = meaning.definitions?.[0];
-    return {
-      pos: meaning.partOfSpeech || '',
-      definition: def?.definition || '',
-      example: def?.example || ''
-    };
+
+    // Response is keyed by language code; each value is an array of POS sections
+    const sections = data[langCode];
+    if (!sections?.length) return null;
+
+    const stripHtml = s => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+    // Collect up to 3 definitions across all POS sections
+    const meanings = [];
+    for (const section of sections) {
+      const pos = section.partOfSpeech || '';
+      for (const d of (section.definitions || [])) {
+        if (meanings.length >= 3) break;
+        const text = stripHtml(d.definition || '');
+        if (text) meanings.push({ pos, text });
+      }
+      if (meanings.length >= 3) break;
+    }
+
+    if (!meanings.length) return null;
+
+    // Primary example from the first definition that has one
+    let example = '';
+    for (const section of sections) {
+      for (const d of (section.definitions || [])) {
+        const ex = d.parsedExamples?.[0]?.example;
+        if (ex) { example = stripHtml(ex); break; }
+      }
+      if (example) break;
+    }
+
+    return { pos: meanings[0].pos, meanings, example };
   } catch (_) {
     return null;
   }
 }
 
-// ── Fetch translation (Lingva primary, MyMemory fallback) then dictionary ────
+// ── Fetch translation + dictionary definition in parallel ────────────────────
 async function fetchDefinition(word, langCode) {
   const cacheKey = `${langCode}:${word.toLowerCase()}`;
   if (defCache.has(cacheKey)) return defCache.get(cacheKey);
   const clean = word.trim();
   const encoded = encodeURIComponent(clean);
 
-  // 1. Race all Lingva instances in parallel — first valid response wins
-  const lingva = await Promise.any(
-    LINGVA_INSTANCES.map(base =>
-      fetchWithTimeout(`${base}/api/v1/${langCode}/en/${encoded}`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => {
-          const t = data?.translation;
-          if (!t || t.toLowerCase() === clean.toLowerCase()) return Promise.reject();
-          return t;
-        })
-    )
-  ).catch(() => null);
+  // Run translation and Wiktionary lookup simultaneously
+  const [translation, dict] = await Promise.all([
+    // Translation: Lingva (parallel race) → MyMemory fallback
+    Promise.any(
+      LINGVA_INSTANCES.map(base =>
+        fetchWithTimeout(`${base}/api/v1/${langCode}/en/${encoded}`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            const t = data?.translation;
+            if (!t || t.toLowerCase() === clean.toLowerCase()) return Promise.reject();
+            return t;
+          })
+      )
+    ).catch(async () => {
+      try {
+        const mmCode = MYMEMORY_CODES[langCode] || langCode;
+        const r = await fetchWithTimeout(
+          `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
+        );
+        if (r.ok) {
+          const data = await r.json();
+          const t = data?.responseData?.translatedText;
+          if (t && t.toLowerCase() !== clean.toLowerCase()) return t;
+        }
+      } catch (_) {}
+      return null;
+    }),
+    // Dictionary: look up the original word directly in Wiktionary
+    fetchWiktionaryDefinition(clean, langCode)
+  ]);
 
-  let translation = lingva;
-
-  if (!translation) {
-    // 2. Fallback: MyMemory
-    try {
-      const mmCode = MYMEMORY_CODES[langCode] || langCode;
-      const r = await fetchWithTimeout(
-        `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
-      );
-      if (r.ok) {
-        const data = await r.json();
-        const t = data?.responseData?.translatedText;
-        if (t && t.toLowerCase() !== clean.toLowerCase()) translation = t;
-      }
-    } catch (_) {}
-  }
-
-  if (!translation) {
+  if (!translation && !dict) {
     defCache.set(cacheKey, null);
     return null;
   }
 
-  // 3. Look up English dictionary definition for the translated word.
-  //    Use only the first word of multi-word translations (e.g. "to run" → "run")
-  const lookupWord = translation.replace(/^to\s+/i, '').split(/\s+/)[0];
-  const dict = await fetchDictionaryDefinition(lookupWord);
-
-  const result = {
-    word: clean,
-    translation,
-    pos: dict?.pos || '',
-    definition: dict?.definition || '',
-    example: dict?.example || ''
-  };
+  const result = { word: clean, translation: translation || '', dict };
   defCache.set(cacheKey, result);
   return result;
 }
@@ -348,10 +372,25 @@ async function handleSelection(myId) {
   t.querySelector('.ct-loading').style.display = 'none';
 
   if (def) {
-    t.querySelector('.ct-translation').textContent = def.translation;
-    t.querySelector('.ct-pos').textContent = def.pos ? `(${def.pos})` : '';
-    t.querySelector('.ct-definition').textContent = def.definition;
-    t.querySelector('.ct-examples').textContent = def.example ? `"${def.example}"` : '';
+    t.querySelector('.ct-translation').textContent = def.translation || '';
+
+    const { dict } = def;
+    if (dict?.meanings?.length) {
+      // Show up to 3 numbered definitions grouped under their pos
+      let posShown = '';
+      const lines = dict.meanings.map((m, i) => {
+        const posLabel = m.pos !== posShown ? (posShown = m.pos, `(${m.pos}) `) : '';
+        return `${i + 1}. ${posLabel}${m.text}`;
+      });
+      t.querySelector('.ct-pos').textContent = '';
+      t.querySelector('.ct-definition').textContent = lines.join('\n');
+      t.querySelector('.ct-examples').textContent = dict.example ? `"${dict.example}"` : '';
+    } else {
+      t.querySelector('.ct-pos').textContent = '';
+      t.querySelector('.ct-definition').textContent = '';
+      t.querySelector('.ct-examples').textContent = '';
+    }
+
     t.querySelector('.ct-result').style.display = 'block';
     t.querySelector('.ct-add-btn').style.display = 'inline-flex';
     t.querySelector('.ct-quizlet-btn').style.display = 'inline-flex';
@@ -368,13 +407,13 @@ async function addToWordBank() {
 
   const t = getTooltip();
   const customInput = t.querySelector('.ct-custom-input');
-  const english = lastDefinition?.definition || customInput.value.trim();
+  const english = lastDefinition?.translation || customInput.value.trim();
 
   const entry = {
     id: Date.now(),
     spanish: lastWord,
     english,
-    pos: lastDefinition?.pos || '',
+    pos: lastDefinition?.dict?.pos || '',
     language: currentLanguage,
     addedAt: new Date().toISOString(),
     strength: 0
@@ -394,7 +433,7 @@ async function sendToQuizlet() {
   if (!lastWord) return;
   const t = getTooltip();
   const customInput = t.querySelector('.ct-custom-input');
-  const definition = lastDefinition?.definition || customInput.value.trim();
+  const definition = lastDefinition?.translation || customInput.value.trim();
   if (!definition) return;
 
   const btn = t.querySelector('.ct-quizlet-btn');
