@@ -346,8 +346,7 @@ document.addEventListener('mouseup', (e) => {
         handleSelection(myId);
       });
     } catch (_) {
-      // Extension context invalidated (e.g. after a reload) — show tooltip anyway
-      handleSelection(myId);
+      // Extension context invalidated (e.g. after a reload) — do nothing
     }
   }, 50);
 });
