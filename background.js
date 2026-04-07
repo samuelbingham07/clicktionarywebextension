@@ -220,24 +220,12 @@ async function addWord(entry) {
     let headers = await getAuthHeaders();
 
     const trySupabaseInsert = async (hdrs) => {
-      // Check duplicate first
-      const dupRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/words?spanish=eq.${encodeURIComponent(entry.spanish.toLowerCase())}&select=id`,
-        { headers: hdrs }
-      );
-      if (dupRes.ok) {
-        const dups = await dupRes.json();
-        if (dups.length > 0) return 'duplicate';
-      } else if (dupRes.status === 401) {
-        return '401';
-      }
-
       const userId = session.user?.id;
       if (!userId) return 'no_user';
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
         method: 'POST',
-        headers: { ...hdrs, 'Prefer': 'return=minimal' },
+        headers: { ...hdrs, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
         body: JSON.stringify({
           user_id: userId,
           spanish: entry.spanish.toLowerCase(),
