@@ -447,13 +447,21 @@ async function addToWordBank() {
     strength: 0
   };
 
-  chrome.runtime.sendMessage({ type: 'ADD_WORD', entry }, (response) => {
-    if (response?.success) {
-      const t = getTooltip();
-      t.querySelector('.ct-add-btn').style.display = 'none';
-      t.querySelector('.ct-saved-msg').style.display = 'inline';
-    }
-  });
+  try {
+    chrome.runtime.sendMessage({ type: 'ADD_WORD', entry }, (response) => {
+      if (chrome.runtime.lastError) return; // context invalidated or no listener
+      if (response?.success) {
+        const t = getTooltip();
+        t.querySelector('.ct-add-btn').style.display = 'none';
+        t.querySelector('.ct-saved-msg').style.display = 'inline';
+      }
+    });
+  } catch (_) {
+    // Extension was reloaded — reload the page to reconnect
+    const t = getTooltip();
+    t.querySelector('.ct-saved-msg').textContent = '↺ Reload page';
+    t.querySelector('.ct-saved-msg').style.display = 'inline';
+  }
 }
 
 // ── Send to Quizlet ─────────────────────────────────────────────────────────
