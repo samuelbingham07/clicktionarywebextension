@@ -216,45 +216,62 @@ async function addWord(entry) {
   const session = await getSession();
 
   if (session) {
-    // Check duplicate first
-    const existing = await supabaseFetch(
-      `/words?spanish=eq.${encodeURIComponent(entry.spanish.toLowerCase())}&select=id`
-    );
-    if (existing && existing.length > 0) return true;
+    // Try to refresh session first if it might be stale
+    let headers = await getAuthHeaders();
 
-    // Get user id from session
-    const userId = session.user?.id;
-    if (!userId) {
-      console.error('Clicktionary: no user id in session');
-      return false;
+    const trySupabaseInsert = async (hdrs) => {
+      // Check duplicate first
+      const dupRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/words?spanish=eq.${encodeURIComponent(entry.spanish.toLowerCase())}&select=id`,
+        { headers: hdrs }
+      );
+      if (dupRes.ok) {
+        const dups = await dupRes.json();
+        if (dups.length > 0) return 'duplicate';
+      } else if (dupRes.status === 401) {
+        return '401';
+      }
+
+      const userId = session.user?.id;
+      if (!userId) return 'no_user';
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
+        method: 'POST',
+        headers: { ...hdrs, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          user_id: userId,
+          spanish: entry.spanish.toLowerCase(),
+          english: entry.english || '',
+          pos: entry.pos || '',
+          strength: 0,
+          language: entry.language || 'es',
+          added_at: new Date().toISOString()
+        })
+      });
+      if (res.ok) return 'ok';
+      if (res.status === 401) return '401';
+      console.error('Clicktionary: failed to save word:', res.status, await res.text());
+      return 'error';
+    };
+
+    let result = await trySupabaseInsert(headers);
+
+    // On 401, attempt token refresh and retry once
+    if (result === '401') {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        headers = await getAuthHeaders();
+        result = await trySupabaseInsert(headers);
+      }
     }
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
-      method: 'POST',
-      headers: {
-        ...(await getAuthHeaders()),
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        user_id: userId,
-        spanish: entry.spanish.toLowerCase(),
-        english: entry.english || '',
-        pos: entry.pos || '',
-        strength: 0,
-        language: entry.language || 'es',
-        added_at: new Date().toISOString()
-      })
-    });
+    if (result === 'ok' || result === 'duplicate') return true;
 
-    if (!res.ok) {
-      const err = await res.text();
-      console.error('Clicktionary: failed to save word:', res.status, err);
-      return false;
-    }
-    return true;
+    // Supabase failed — fall back to local storage so the word is not lost
+    console.warn('Clicktionary: Supabase unavailable, saving locally');
   }
 
-  // Fallback: local storage if not signed in
+  // Local storage fallback (used when not signed in, or Supabase fails)
   try {
     const local = await chrome.storage.local.get('wordBank');
     const words = local.wordBank || [];
@@ -315,6 +332,8 @@ function isQuizletEditorTab(url) {
 // Must be declared async so chrome.scripting.executeScript awaits the result
 async function quizletFillCard(term, definition) {
   const wait = ms => new Promise(r => setTimeout(r, ms));
+  term = term.replace(/\.+$/, '').trim();
+  definition = definition.replace(/\.+$/, '').trim();
 
   function allPm() {
     return [...document.querySelectorAll('[pm-placeholder]')];
