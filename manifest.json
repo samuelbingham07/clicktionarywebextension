@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clicktionary",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Highlight any word in 10 languages to get instant translations and build your personal word bank. Practice with flashcards & quizzes",
   "homepage_url": "https://samuelbingham07.github.io/clicktionarywebextension/",
   "permissions": [
