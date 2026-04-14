@@ -55,6 +55,11 @@ function findLastEmptyTermInput() {
   return null;
 }
 
+function isDefinitionField(el) {
+  const p = el.getAttribute('pm-placeholder').toLowerCase();
+  return p.includes('definition') || p.includes('english');
+}
+
 function findDefinitionInput(termEl) {
   const all = [...document.querySelectorAll('[pm-placeholder]')];
   const idx = all.indexOf(termEl);
@@ -62,10 +67,10 @@ function findDefinitionInput(termEl) {
 
   // Try forward first, then backward — Quizlet's DOM order varies
   for (let i = idx + 1; i < all.length; i++) {
-    if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
+    if (isDefinitionField(all[i])) return all[i];
   }
   for (let i = idx - 1; i >= 0; i--) {
-    if (all[i].getAttribute('pm-placeholder').toLowerCase().includes('definition')) return all[i];
+    if (isDefinitionField(all[i])) return all[i];
   }
   return null;
 }
