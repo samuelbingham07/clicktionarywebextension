@@ -158,15 +158,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // ── Auth toggle (Sign In ↔ Sign Up) ──
-  document.getElementById('authToggleLink').addEventListener('click', () => {
-    isSignUp = !isSignUp;
-    document.getElementById('authTitle').textContent = isSignUp ? 'Create an account' : 'Sign in to Clicktionary';
-    document.getElementById('authSubmit').textContent = isSignUp ? 'Sign Up' : 'Sign In';
-    document.getElementById('authToggleText').textContent = isSignUp ? 'Already have an account?' : "Don't have an account?";
-    document.getElementById('authToggleLink').textContent = isSignUp ? 'Sign In' : 'Sign Up';
+  // ── Auth tabs (Sign In ↔ Create Account) ──
+  function setAuthTab(signUp) {
+    isSignUp = signUp;
+    document.getElementById('authSubmit').textContent = signUp ? 'Create Account' : 'Sign In';
+    document.getElementById('tabSignIn').style.color = signUp ? '#aaa' : '#f0b400';
+    document.getElementById('tabSignIn').style.borderBottomColor = signUp ? 'transparent' : '#f0b400';
+    document.getElementById('tabSignUp').style.color = signUp ? '#f0b400' : '#aaa';
+    document.getElementById('tabSignUp').style.borderBottomColor = signUp ? '#f0b400' : 'transparent';
     clearMessages();
-  });
+  }
+  document.getElementById('tabSignIn').addEventListener('click', () => setAuthTab(false));
+  document.getElementById('tabSignUp').addEventListener('click', () => setAuthTab(true));
 
   // ── Submit auth form ──
   document.getElementById('authSubmit').addEventListener('click', async () => {
