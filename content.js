@@ -31,7 +31,7 @@ function createTooltip() {
     <div class="ct-header">
       <div class="ct-header-left">
         <span class="ct-lang"></span>
-        <span class="ct-word"></span>
+        <span class="ct-word" dir="auto"></span>
       </div>
       <button class="ct-close">✕</button>
     </div>
@@ -107,7 +107,9 @@ const LINGVA_INSTANCES = [
   'https://translate.plausibility.cloud',
 ];
 
-const MYMEMORY_CODES = { zh: 'zh-CN' };
+const MYMEMORY_CODES = { zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
+// Lingva uses Google Translate language codes
+const LINGVA_CODES = { zh: 'zh-CN' };
 
 function fetchWithTimeout(url, ms = 2000) {
   const controller = new AbortController();
@@ -193,12 +195,15 @@ async function fetchDefinition(word, langCode) {
   const clean = word.trim();
   const encoded = encodeURIComponent(clean);
 
+  // Custom language codes (e.g. custom_1234) have no translation API support
+  const isCustomLang = langCode.startsWith('custom_');
+
   // Run translation and Wiktionary lookup simultaneously
   const [translation, dict] = await Promise.all([
     // Translation: Lingva (parallel race) → MyMemory fallback
-    Promise.any(
+    isCustomLang ? Promise.resolve(null) : Promise.any(
       LINGVA_INSTANCES.map(base =>
-        fetchWithTimeout(`${base}/api/v1/${langCode}/en/${encoded}`)
+        fetchWithTimeout(`${base}/api/v1/${LINGVA_CODES[langCode] || langCode}/en/${encoded}`)
           .then(r => r.ok ? r.json() : Promise.reject())
           .then(data => {
             const t = data?.translation;
@@ -271,8 +276,10 @@ function extractHardWords(langCode) {
     const text = node.textContent;
     let matches;
 
-    if (langCode === 'zh' || langCode === 'ja') {
-      matches = text.match(/[\u4e00-\u9fff\u3040-\u30ff]{2,4}/g) || [];
+    if (langCode === 'zh') {
+      matches = text.match(/[\u4e00-\u9fff]{2,4}/g) || [];
+    } else if (langCode === 'ja') {
+      matches = text.match(/[\u3040-\u30ff\u4e00-\u9fff]{2,4}/g) || [];
     } else if (langCode === 'ko') {
       matches = text.match(/[\uac00-\ud7af]{2,6}/g) || [];
     } else if (langCode === 'ar') {
