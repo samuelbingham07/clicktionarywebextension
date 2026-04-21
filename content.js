@@ -309,11 +309,14 @@ function extractHardWords(langCode) {
 }
 
 async function prefetchHardWords() {
-  // Wait for page to settle and for storage read to complete
   await new Promise(r => setTimeout(r, 2000));
 
-  chrome.storage.local.get('extensionOff', async (r) => {
+  chrome.storage.local.get(['extensionOff', 'lastPrefetchHost'], async (r) => {
     if (r.extensionOff) return;
+    // Only prefetch once per hostname per session
+    const host = location.hostname;
+    if (r.lastPrefetchHost === host) return;
+    chrome.storage.local.set({ lastPrefetchHost: host });
 
     const words = extractHardWords(currentLanguage);
     for (const word of words) {
@@ -469,6 +472,10 @@ async function addToWordBank() {
       if (response?.success) {
         addBtn.style.display = 'none';
         t.querySelector('.ct-saved-msg').style.display = 'inline';
+      } else {
+        t.querySelector('.ct-saved-msg').textContent = '✕ Save failed';
+        t.querySelector('.ct-saved-msg').style.display = 'inline';
+        setTimeout(() => { t.querySelector('.ct-saved-msg').textContent = '✓ Saved!'; t.querySelector('.ct-saved-msg').style.display = 'none'; }, 2000);
       }
     });
   } catch (_) {

@@ -266,8 +266,63 @@
       transition: opacity 0.15s, color 0.15s;
     }
 
-    .word-card:hover .card-delete { opacity: 1; }
+    .card-edit {
+      background: none;
+      border: none;
+      color: #764c0f;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .word-card:hover .card-delete,
+    .word-card:hover .card-edit { opacity: 1; }
     .card-delete:hover { color: #f0b400; }
+    .card-edit:hover { color: #f0b400; }
+
+    .card-edit-form {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-edit-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      background: #fff;
+      color: #222;
+      outline: none;
+    }
+    .card-edit-input:focus { border-color: #f0b400; }
+    .card-edit-actions { display: flex; gap: 6px; }
+    .card-edit-save {
+      flex: 1;
+      background: #f0b400;
+      color: #764c0f;
+      border: none;
+      border-radius: 6px;
+      padding: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .card-edit-cancel {
+      background: none;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: #764c0f;
+      cursor: pointer;
+    }
 
     .card-pos {
       font-size: 10px;
@@ -728,6 +783,14 @@ const LANGUAGES = {
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3ZxdGJrZm50emR2YmluZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMTc3NzAsImV4cCI6MjA4OTg5Mzc3MH0.QCIoHwvt41QcLJ3ilSezTntNGzXyFFpHQf-7kz6mKzU';
 
 let authToken = null;
+let authUserId = null;
+
+function getUserIdFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub || null;
+  } catch (_) { return null; }
+}
 
 function getTokenFromHash() {
   try {
@@ -804,6 +867,7 @@ async function init() {
   // 1. Try URL hash (passed by popup's "Open Word Bank" button)
   authToken = getTokenFromHash();
   if (authToken) {
+    authUserId = getUserIdFromToken(authToken);
     history.replaceState(null, '', window.location.pathname);
   }
 
@@ -821,6 +885,7 @@ async function init() {
       });
       window.postMessage({ type: 'CLICKTIONARY_GET_SESSION' }, '*');
     });
+    if (authToken) authUserId = getUserIdFromToken(authToken);
   }
 
   if (!authToken) {
@@ -881,13 +946,24 @@ function renderWordGrid() {
       <div class="word-card" data-id="${w.id}">
         <div class="card-top">
           <div class="card-es">${w.spanish}</div>
-          <button class="card-delete" data-id="${w.id}" title="Remove">✕</button>
+          <div style="display:flex;gap:2px">
+            <button class="card-edit" data-id="${w.id}" title="Edit">✎</button>
+            <button class="card-delete" data-id="${w.id}" title="Remove">✕</button>
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
           ${w.language && LANGUAGES[w.language] ? `<div style="font-size:10px;color:#764c0f;font-family:Arial,sans-serif">${LANGUAGES[w.language].flag} ${LANGUAGES[w.language].name}</div>` : ''}
         </div>
         <div class="card-en">${w.english || '—'}</div>
+        <div class="card-edit-form" style="display:none" data-id="${w.id}">
+          <input class="card-edit-input" data-field="spanish" value="${w.spanish}" placeholder="Word" />
+          <input class="card-edit-input" data-field="english" value="${w.english || ''}" placeholder="Translation" />
+          <div class="card-edit-actions">
+            <button class="card-edit-save" data-id="${w.id}">Save</button>
+            <button class="card-edit-cancel">Cancel</button>
+          </div>
+        </div>
         <div class="card-footer">
           <div class="strength-dots">${dots}</div>
           <div class="card-date">${date}</div>
@@ -898,9 +974,46 @@ function renderWordGrid() {
   grid.querySelectorAll('.card-delete').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
+      if (!confirm(`Remove "${btn.closest('.word-card').querySelector('.card-es').textContent}"?`)) return;
       const id = Number(btn.dataset.id);
       await Store.deleteWord(id);
       allWords = allWords.filter(w => w.id !== id);
+      renderStats();
+      renderWordGrid();
+    });
+  });
+
+  grid.querySelectorAll('.card-edit').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = btn.closest('.word-card');
+      const form = card.querySelector('.card-edit-form');
+      form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+    });
+  });
+
+  grid.querySelectorAll('.card-edit-cancel').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      btn.closest('.card-edit-form').style.display = 'none';
+    });
+  });
+
+  grid.querySelectorAll('.card-edit-save').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.id);
+      const form = btn.closest('.card-edit-form');
+      const spanish = form.querySelector('[data-field="spanish"]').value.trim().toLowerCase();
+      const english = form.querySelector('[data-field="english"]').value.trim();
+      if (!spanish) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/words?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { ...supabaseHeaders() },
+        body: JSON.stringify({ spanish, english })
+      });
+      const i = allWords.findIndex(w => w.id === id);
+      if (i > -1) allWords[i] = { ...allWords[i], spanish, english };
       renderStats();
       renderWordGrid();
     });
@@ -983,8 +1096,10 @@ function renderFlashcard(area, pct) {
     btn.addEventListener('click', async () => {
       const result = Number(btn.dataset.result);
       const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + result - 0.5));
-      await Store.updateWord(word.id, { strength: Math.round(newStrength) });
-      allWords = await Store.getWords();
+      const rounded = Math.round(newStrength);
+      await Store.updateWord(word.id, { strength: rounded });
+      const wi = allWords.findIndex(w => w.id === word.id);
+      if (wi > -1) allWords[wi] = { ...allWords[wi], strength: rounded };
       practiceIndex++;
       renderPractice();
     });
@@ -1020,7 +1135,8 @@ function renderMultipleChoice(area, pct) {
       const delta = correct ? 1 : -1;
       const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + delta));
       await Store.updateWord(word.id, { strength: newStrength });
-      allWords = await Store.getWords();
+      const wi = allWords.findIndex(w => w.id === word.id);
+      if (wi > -1) allWords[wi] = { ...allWords[wi], strength: newStrength };
       setTimeout(() => { practiceIndex++; renderPractice(); }, 900);
     });
   });
@@ -1129,7 +1245,7 @@ document.getElementById('addWordSaveBtn').addEventListener('click', async () => 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
       method: 'POST',
       headers: { ...supabaseHeaders(), 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ spanish: finalTarget.toLowerCase(), english: finalEnglish, pos: '', strength: 0, language: langCode, added_at: new Date().toISOString() })
+      body: JSON.stringify({ user_id: authUserId, spanish: finalTarget.toLowerCase(), english: finalEnglish, pos: '', strength: 0, language: langCode, added_at: new Date().toISOString() })
     });
     if (res.ok || res.status === 201) {
       msg.className = 'add-word-msg success'; msg.textContent = '✓ Saved!';

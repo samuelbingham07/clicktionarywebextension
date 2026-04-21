@@ -104,7 +104,14 @@ async function signInWithGoogle() {
 
 async function getSession() {
   const result = await chrome.storage.local.get('supabase_session');
-  return result.supabase_session || null;
+  const session = result.supabase_session || null;
+  if (!session) return null;
+  // Auto-refresh if token is expired or about to expire (within 60s)
+  if (session.expires_at && session.expires_at * 1000 < Date.now() + 60000) {
+    const refreshed = await refreshSession();
+    return refreshed || null;
+  }
+  return session;
 }
 
 async function getAuthHeaders() {

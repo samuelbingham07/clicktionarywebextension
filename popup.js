@@ -483,6 +483,23 @@ function loadWords(language) {
     document.getElementById('totalWords').textContent = total;
     document.getElementById('masteredWords').textContent = mastered;
 
+    // Language breakdown across all words
+    const breakdown = document.getElementById('langBreakdown');
+    const counts = {};
+    words.forEach(w => { const l = w.language || 'es'; counts[l] = (counts[l] || 0) + 1; });
+    const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    if (entries.length > 1) {
+      const LANG_MAP = {};
+      LANGUAGES.forEach(l => { LANG_MAP[l.code] = l; });
+      breakdown.style.display = 'flex';
+      breakdown.innerHTML = entries.map(([code, n]) => {
+        const l = LANG_MAP[code];
+        return `<span style="font-size:10px;font-family:Arial,sans-serif;background:#fffde7;border:1px solid #f0d9a0;border-radius:4px;padding:2px 6px;color:#764c0f">${l ? l.flag + ' ' : ''}${n}</span>`;
+      }).join('');
+    } else {
+      breakdown.style.display = 'none';
+    }
+
     const list = document.getElementById('wordList');
     if (total === 0) {
       list.innerHTML = '<div class="empty-state">No words yet — highlight some text!</div>';
