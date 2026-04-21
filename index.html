@@ -908,8 +908,14 @@ function renderWordGrid() {
 }
 
 // ── Practice ─────────────────────────────────────────────────────────────────
+function practiceWords() {
+  let words = allWords;
+  if (currentLangFilter !== 'all') words = words.filter(w => (w.language || 'es') === currentLangFilter);
+  return words;
+}
+
 function startPractice() {
-  practiceQueue = [...allWords].sort(() => Math.random() - 0.5);
+  practiceQueue = [...practiceWords()].sort(() => Math.random() - 0.5);
   practiceIndex = 0;
   isFlipped = false;
   renderPractice();
@@ -988,7 +994,7 @@ function renderFlashcard(area, pct) {
 function renderMultipleChoice(area, pct) {
   const word = practiceQueue[practiceIndex];
   // Pick 3 random wrong answers
-  const others = allWords.filter(w => w.id !== word.id && w.english).sort(() => Math.random() - 0.5).slice(0, 3);
+  const others = practiceWords().filter(w => w.id !== word.id && w.english).sort(() => Math.random() - 0.5).slice(0, 3);
   if (others.length < 3) { renderFlashcard(area, pct); return; }
 
   const options = [...others.map(w => ({ text: w.english, correct: false })), { text: word.english, correct: true }]

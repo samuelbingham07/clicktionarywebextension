@@ -83,6 +83,7 @@ async function signInWithGoogle() {
           if (data.access_token) {
             await chrome.storage.local.set({ supabase_session: data });
             await chrome.storage.local.remove('googleAuthError');
+            syncLocalWordsToSupabase();
             // Re-open the popup (it likely closed when the auth window opened)
             try { chrome.action.openPopup(); } catch (_) {}
             resolve({ success: true, user: data.user });
@@ -142,6 +143,7 @@ async function signInWithEmail(email, password) {
   const data = await res.json();
   if (data.access_token) {
     await chrome.storage.local.set({ supabase_session: data });
+    syncLocalWordsToSupabase();
     return { success: true, user: data.user };
   }
   return { success: false, error: data.error_description || data.msg || 'Sign in failed' };
@@ -156,6 +158,7 @@ async function signUpWithEmail(email, password) {
   const data = await res.json();
   if (data.access_token) {
     await chrome.storage.local.set({ supabase_session: data });
+    syncLocalWordsToSupabase();
     return { success: true, user: data.user };
   }
   // If email confirmation required
@@ -272,6 +275,38 @@ async function addWord(entry) {
     console.error('Clicktionary: local storage fallback failed', e);
     return false;
   }
+}
+
+async function syncLocalWordsToSupabase() {
+  const local = await chrome.storage.local.get('wordBank');
+  const words = local.wordBank || [];
+  if (!words.length) return;
+
+  const session = await getSession();
+  if (!session?.user?.id) return;
+
+  const headers = await getAuthHeaders();
+  const userId = session.user.id;
+
+  for (const word of words) {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/words`, {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+        body: JSON.stringify({
+          user_id: userId,
+          spanish: (word.spanish || '').toLowerCase(),
+          english: word.english || '',
+          pos: word.pos || '',
+          strength: word.strength || 0,
+          language: word.language || 'es',
+          added_at: word.addedAt || new Date().toISOString()
+        })
+      });
+    } catch (_) {}
+  }
+
+  await chrome.storage.local.remove('wordBank');
 }
 
 async function deleteWord(id) {

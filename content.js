@@ -256,7 +256,11 @@ function couldBeSelectedLanguage(text, langCode) {
   if (langCode === 'ko') return /[\uac00-\ud7af]/.test(text);
   if (langCode === 'ar') return /[\u0600-\u06ff]/.test(text);
   if (langCode === 'ru') return /[\u0400-\u04ff]/.test(text);
-  // Latin-script languages — just check for letters
+  // Latin-script languages — suppress on clearly English pages
+  const pageLang = (document.documentElement.lang || '').toLowerCase();
+  if (pageLang.startsWith('en') && !pageLang.startsWith(langCode)) {
+    return /[À-ž]/.test(text); // require at least one accented char on English pages
+  }
   return /[a-zA-ZÀ-ž]/.test(text);
 }
 
@@ -453,17 +457,21 @@ async function addToWordBank() {
     strength: 0
   };
 
+  const addBtn = t.querySelector('.ct-add-btn');
+  addBtn.textContent = 'Saving…';
+  addBtn.disabled = true;
+
   try {
     chrome.runtime.sendMessage({ type: 'ADD_WORD', entry }, (response) => {
-      if (chrome.runtime.lastError) return; // context invalidated or no listener
+      if (chrome.runtime.lastError) return;
+      addBtn.textContent = '＋ Add to Word Bank';
+      addBtn.disabled = false;
       if (response?.success) {
-        const t = getTooltip();
-        t.querySelector('.ct-add-btn').style.display = 'none';
+        addBtn.style.display = 'none';
         t.querySelector('.ct-saved-msg').style.display = 'inline';
       }
     });
   } catch (_) {
-    // Extension was reloaded — reload the page to reconnect
     const t = getTooltip();
     t.querySelector('.ct-saved-msg').textContent = '↺ Reload page';
     t.querySelector('.ct-saved-msg').style.display = 'inline';
