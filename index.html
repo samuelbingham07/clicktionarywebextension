@@ -863,6 +863,26 @@ let practiceQueue = [];
 let practiceIndex = 0;
 let isFlipped = false;
 
+// ── Strength Decay ────────────────────────────────────────────────────────────
+let reviewTimes = {};
+
+function loadReviewTimes() {
+  try { reviewTimes = JSON.parse(localStorage.getItem('ct_review_times') || '{}'); } catch (_) {}
+}
+
+function saveReviewTime(id) {
+  reviewTimes[String(id)] = Date.now();
+  try { localStorage.setItem('ct_review_times', JSON.stringify(reviewTimes)); } catch (_) {}
+}
+
+function effectiveStrength(word) {
+  const last = reviewTimes[String(word.id)];
+  const strength = word.strength || 0;
+  if (!last) return strength;
+  const daysSince = (Date.now() - last) / 86400000;
+  return Math.max(0, strength - Math.floor(daysSince / 7));
+}
+
 async function init() {
   // 1. Try URL hash (passed by popup's "Open Word Bank" button)
   authToken = getTokenFromHash();
@@ -895,6 +915,7 @@ async function init() {
     return;
   }
 
+  loadReviewTimes();
   allWords = await Store.getWords();
   renderStats();
   renderWordGrid();
@@ -939,13 +960,18 @@ function renderWordGrid() {
   grid.innerHTML = words.map(w => {
     const date = new Date(w.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const strength = w.strength || 0;
+    const effStr = effectiveStrength(w);
+    const isDue = effStr < strength;
     const dots = Array.from({ length: 5 }, (_, i) =>
-      `<div class="dot ${i < strength ? (strength >= 4 ? 'filled' : 'partial') : ''}"></div>`
+      `<div class="dot ${i < effStr ? (effStr >= 4 ? 'filled' : 'partial') : ''}"></div>`
     ).join('');
     return `
       <div class="word-card" data-id="${w.id}">
         <div class="card-top">
-          <div class="card-es">${w.spanish}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <div class="card-es">${w.spanish}</div>
+            ${isDue ? `<div style="font-size:9px;color:#f0b400;background:rgba(240,180,0,0.12);border:1px solid rgba(240,180,0,0.35);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0">Due</div>` : ''}
+          </div>
           <div style="display:flex;gap:2px">
             <button class="card-edit" data-id="${w.id}" title="Edit">✎</button>
             <button class="card-delete" data-id="${w.id}" title="Remove">✕</button>
@@ -1028,7 +1054,10 @@ function practiceWords() {
 }
 
 function startPractice() {
-  practiceQueue = [...practiceWords()].sort(() => Math.random() - 0.5);
+  practiceQueue = [...practiceWords()].sort((a, b) => {
+    const diff = effectiveStrength(a) - effectiveStrength(b);
+    return diff !== 0 ? diff : Math.random() - 0.5;
+  });
   practiceIndex = 0;
   isFlipped = false;
   renderPractice();
@@ -1098,6 +1127,7 @@ function renderFlashcard(area, pct) {
       const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + result - 0.5));
       const rounded = Math.round(newStrength);
       await Store.updateWord(word.id, { strength: rounded });
+      saveReviewTime(word.id);
       const wi = allWords.findIndex(w => w.id === word.id);
       if (wi > -1) allWords[wi] = { ...allWords[wi], strength: rounded };
       practiceIndex++;
@@ -1135,6 +1165,7 @@ function renderMultipleChoice(area, pct) {
       const delta = correct ? 1 : -1;
       const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + delta));
       await Store.updateWord(word.id, { strength: newStrength });
+      saveReviewTime(word.id);
       const wi = allWords.findIndex(w => w.id === word.id);
       if (wi > -1) allWords[wi] = { ...allWords[wi], strength: newStrength };
       setTimeout(() => { practiceIndex++; renderPractice(); }, 900);
