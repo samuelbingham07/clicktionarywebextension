@@ -42,7 +42,7 @@ function findAllTermInputs() {
   // Quizlet uses the target language as placeholder (e.g. "Enter Spanish", "Enter French")
   // Select all pm-placeholder inputs that are NOT the definition field
   return [...document.querySelectorAll('[pm-placeholder]')].filter(el =>
-    !el.getAttribute('pm-placeholder').toLowerCase().includes('definition')
+    !isDefinitionField(el)
   );
 }
 
