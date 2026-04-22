@@ -187,7 +187,8 @@ async function signOut() {
 }
 
 async function refreshSession() {
-  const session = await getSession();
+  const result = await chrome.storage.local.get('supabase_session');
+  const session = result.supabase_session || null;
   if (!session?.refresh_token) return null;
   const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST',
