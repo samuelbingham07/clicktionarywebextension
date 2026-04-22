@@ -374,6 +374,13 @@ async function quizletFillCard(term, definition) {
   function allPm() {
     return [...document.querySelectorAll('[pm-placeholder]')];
   }
+
+  // Wait for React to render the editor (up to 10s)
+  for (let i = 0; i < 100; i++) {
+    if (allPm().length > 0) break;
+    await wait(100);
+  }
+  if (allPm().length === 0) return { success: false, error: 'Editor did not render.' };
   function isDefinitionField(el) {
     const p = el.getAttribute('pm-placeholder').toLowerCase();
     return p.includes('definition') || p.includes('english');
