@@ -105,6 +105,8 @@ function hideTooltip() {
 const LINGVA_INSTANCES = [
   'https://lingva.ml',
   'https://translate.plausibility.cloud',
+  'https://lingva.thedaviddelta.com',
+  'https://lingva.garudalinux.org',
 ];
 
 const MYMEMORY_CODES = { zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
