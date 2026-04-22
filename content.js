@@ -485,7 +485,8 @@ async function sendToQuizlet() {
   if (!lastWord) return;
   const t = getTooltip();
   const customInput = t.querySelector('.ct-custom-input');
-  const definition = lastDefinition?.translation || customInput.value.trim();
+  const dictFallback = lastDefinition?.dict?.meanings?.[0]?.text || '';
+  const definition = lastDefinition?.translation || dictFallback || customInput.value.trim();
   if (!definition) return;
 
   const btn = t.querySelector('.ct-quizlet-btn');
