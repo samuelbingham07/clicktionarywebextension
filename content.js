@@ -135,8 +135,15 @@ function stripClitics(word) {
 }
 
 // ── Fetch translation (Lingva → MyMemory fallback) ──────────────────────────
+const LANG_BUNDLES = { es: typeof ES_BUNDLE !== 'undefined' ? ES_BUNDLE : null };
+
 async function fetchTranslation(word, langCode) {
   if (langCode.startsWith('custom_')) return null;
+  const bundle = LANG_BUNDLES[langCode];
+  if (bundle) {
+    const entry = bundle.get(word.toLowerCase().trim());
+    if (entry) return entry[0];
+  }
   const encoded = encodeURIComponent(word.trim());
   return Promise.any(
     LINGVA_INSTANCES.map(base =>
