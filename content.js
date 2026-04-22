@@ -256,11 +256,6 @@ function couldBeSelectedLanguage(text, langCode) {
   if (langCode === 'ko') return /[\uac00-\ud7af]/.test(text);
   if (langCode === 'ar') return /[\u0600-\u06ff]/.test(text);
   if (langCode === 'ru') return /[\u0400-\u04ff]/.test(text);
-  // Latin-script languages — suppress on clearly English pages
-  const pageLang = (document.documentElement.lang || '').toLowerCase();
-  if (pageLang.startsWith('en') && !pageLang.startsWith(langCode)) {
-    return /[À-ž]/.test(text); // require at least one accented char on English pages
-  }
   return /[a-zA-ZÀ-ž]/.test(text);
 }
 
