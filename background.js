@@ -374,13 +374,6 @@ async function quizletFillCard(term, definition) {
   function allPm() {
     return [...document.querySelectorAll('[pm-placeholder]')];
   }
-
-  // Wait for React to render the editor (up to 10s)
-  for (let i = 0; i < 100; i++) {
-    if (allPm().length > 0) break;
-    await wait(100);
-  }
-  if (allPm().length === 0) return { success: false, error: 'Editor did not render.' };
   function isDefinitionField(el) {
     const p = el.getAttribute('pm-placeholder').toLowerCase();
     return p.includes('definition') || p.includes('english');
@@ -427,7 +420,6 @@ async function quizletFillCard(term, definition) {
   const card = termEl.closest('li, [class*="TermRow"], [class*="SetEditorRow"]') || termEl.parentElement;
   card.setAttribute('data-ct-card', 'true');
 
-  console.log('[Clicktionary MAIN] termEl placeholder:', termEl.getAttribute('pm-placeholder'));
   fill(termEl, term);
   await wait(300);
 
@@ -447,10 +439,8 @@ async function quizletFillCard(term, definition) {
 
   if (!defEl) return { success: false, error: 'Definition field not found.' };
 
-  console.log('[Clicktionary MAIN] defEl placeholder:', defEl.getAttribute('pm-placeholder'));
   fill(defEl, definition);
   await wait(200);
-  console.log('[Clicktionary MAIN] defEl content after fill:', defEl.textContent);
 
   return { success: true };
 }
