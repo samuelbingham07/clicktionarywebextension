@@ -100,7 +100,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  const sessionFallback = setTimeout(() => {
+    document.getElementById('loadingPanel').style.display = 'none';
+    document.getElementById('authPanel').style.display = 'block';
+  }, 3000);
+
   chrome.runtime.sendMessage({ type: 'GET_SESSION' }, (response) => {
+    clearTimeout(sessionFallback);
     document.getElementById('loadingPanel').style.display = 'none';
     if (chrome.runtime.lastError || !response) {
       document.getElementById('authPanel').style.display = 'block';
