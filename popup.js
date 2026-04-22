@@ -100,10 +100,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  chrome.runtime.sendMessage({ type: 'GET_SESSION' }, async ({ session }) => {
+  chrome.runtime.sendMessage({ type: 'GET_SESSION' }, (response) => {
     document.getElementById('loadingPanel').style.display = 'none';
-    if (session) {
-      showMainPanel(session);
+    if (chrome.runtime.lastError || !response) {
+      document.getElementById('authPanel').style.display = 'block';
+      return;
+    }
+    if (response.session) {
+      showMainPanel(response.session);
     } else {
       document.getElementById('authPanel').style.display = 'block';
     }
