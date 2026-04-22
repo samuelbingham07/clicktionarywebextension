@@ -546,6 +546,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendToQuizlet(message.term, message.definition).then(sendResponse);
     return true;
   }
+  if (message.type === 'FILL_QUIZLET_PENDING') {
+    const tabId = sender.tab.id;
+    setTimeout(async () => {
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          world: 'MAIN',
+          func: quizletFillCard,
+          args: [message.term, message.definition]
+        });
+      } catch (_) {}
+    }, 1500);
+    return false;
+  }
   if (message.type === 'ADD_WORD') {
     addWord(message.entry).then(success => sendResponse({ success }));
     return true;
