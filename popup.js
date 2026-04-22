@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (response.session) {
-      showMainPanel(response.session);
+      showMainPanel(response.session.user || response.session);
     } else {
       document.getElementById('authPanel').style.display = 'block';
     }

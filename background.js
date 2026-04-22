@@ -190,16 +190,21 @@ async function refreshSession() {
   const result = await chrome.storage.local.get('supabase_session');
   const session = result.supabase_session || null;
   if (!session?.refresh_token) return null;
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-    body: JSON.stringify({ refresh_token: session.refresh_token })
-  });
-  const data = await res.json();
-  if (data.access_token) {
-    await chrome.storage.local.set({ supabase_session: data });
-    return data;
-  }
+  try {
+    const res = await Promise.race([
+      fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+    ]);
+    const data = await res.json();
+    if (data.access_token) {
+      await chrome.storage.local.set({ supabase_session: data });
+      return data;
+    }
+  } catch (_) {}
   return null;
 }
 
