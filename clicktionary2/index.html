@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clicktionary — Word Bank</title>
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #fffde7;
+      --surface2: #fff9c4;
+      --accent: #f0b400;
+      --accent2: #ffe082;
+      --text: #222222;
+      --muted: #764c0f;
+      --border: rgba(0,0,0,0.1);
+      --green: #4caf50;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #ffffff;
+      color: #222222;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .app { position: relative; z-index: 1; }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+      background: #fffde7;
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: #222222;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-logo span { color: #764c0f; }
+
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+      background: #fffde7;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .nav-tab {
+      padding: 8px 20px;
+      border-radius: 7px;
+      border: none;
+      background: none;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab.active {
+      background: #f0b400;
+      color: #764c0f;
+    }
+
+    .nav-tab:hover:not(.active) { color: #222222; }
+
+    .nav-count {
+      font-size: 13px;
+      color: #764c0f;
+      font-weight: 500;
+    }
+
+    /* ── Hero strip ── */
+    .hero {
+      padding: 48px 48px 48px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-title em {
+      color: #f0b400;
+      font-style: italic;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+
+    .stat-card {
+      background: #fffde7;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      padding: 16px 24px;
+      text-align: center;
+      min-width: 90px;
+    }
+
+    .stat-card .num {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: #f0b400;
+    }
+
+    .stat-card .lbl {
+      font-size: 11px;
+      color: #764c0f;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 2px;
+    }
+
+    /* ── Main content ── */
+    main { padding: 40px 48px 64px; border-top: 2px solid #f0b400; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Word Bank View ── */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      background: #fffde7;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: #222222;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-box:focus { border-color: #f0b400; }
+    .search-box::placeholder { color: #764c0f; }
+
+    .filter-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: #fffde7;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn.active { border-color: #f0b400; color: #f0b400; }
+    .filter-btn:hover:not(.active) { color: #222222; }
+
+    .export-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      background: #3b82f6;
+      color: #ffffff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+    .export-btn:hover { background: #2563eb; }
+    .export-btn.copied { background: #16a34a; cursor: default; }
+    .export-btn:disabled { opacity: 0.7; cursor: default; }
+
+    .word-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .word-card {
+      background: #fffde7;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 14px;
+      padding: 18px 20px;
+      position: relative;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      cursor: default;
+    }
+
+    .word-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      border-color: rgba(233,69,96,0.3);
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .card-es {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #222222;
+      line-height: 1.2;
+    }
+
+    .card-delete {
+      background: none;
+      border: none;
+      color: #764c0f;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+    }
+
+    .card-edit {
+      background: none;
+      border: none;
+      color: #764c0f;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .word-card:hover .card-delete,
+    .word-card:hover .card-edit { opacity: 1; }
+    .card-delete:hover { color: #f0b400; }
+    .card-edit:hover { color: #f0b400; }
+
+    .card-edit-form {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-edit-input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      background: #fff;
+      color: #222;
+      outline: none;
+    }
+    .card-edit-input:focus { border-color: #f0b400; }
+    .card-edit-actions { display: flex; gap: 6px; }
+    .card-edit-save {
+      flex: 1;
+      background: #f0b400;
+      color: #764c0f;
+      border: none;
+      border-radius: 6px;
+      padding: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .card-edit-cancel {
+      background: none;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      color: #764c0f;
+      cursor: pointer;
+    }
+
+    .card-pos {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #f0b400;
+      margin-bottom: 4px;
+    }
+
+    .card-en {
+      font-size: 13px;
+      color: #764c0f;
+      line-height: 1.4;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .strength-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.1);
+      transition: background 0.2s;
+    }
+
+    .dot.filled { background: #4caf50; }
+    .dot.partial { background: #ffe082; }
+
+    .card-date {
+      font-size: 10px;
+      color: #764c0f;
+    }
+
+    /* ── Practice View ── */
+    .practice-container {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .practice-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .practice-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 4px;
+      background: #fffde7;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .mode-btn {
+      padding: 6px 14px;
+      border-radius: 5px;
+      border: none;
+      background: none;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-btn.active { background: #fffde7; color: #764c0f; }
+
+    /* Flashcard */
+    .flashcard-scene {
+      perspective: 1000px;
+      margin-bottom: 24px;
+    }
+
+    .flashcard {
+      width: 100%;
+      min-height: 240px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .flashcard.flipped { transform: rotateY(180deg); }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      background: #fffde7;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+      min-height: 240px;
+    }
+
+    .card-back { transform: rotateY(180deg); }
+
+    .card-face .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #764c0f;
+      margin-bottom: 16px;
+    }
+
+    .card-face .main-word {
+      font-family: 'Playfair Display', serif;
+      font-size: 40px;
+      font-weight: 700;
+      color: #222222;
+      line-height: 1.1;
+    }
+
+    .card-face .hint {
+      font-size: 12px;
+      color: #764c0f;
+      margin-top: 12px;
+    }
+
+    .card-back .main-word { color: #f0b400; }
+
+    .card-controls {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .ctrl-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: #fffde7;
+      color: #222222;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn .icon { font-size: 22px; }
+    .ctrl-btn.wrong:hover { border-color: #f0b400; background: rgba(233,69,96,0.1); }
+    .ctrl-btn.hard:hover { border-color: #ffe082; background: rgba(245,166,35,0.1); }
+    .ctrl-btn.correct:hover { border-color: #4caf50; background: rgba(78,203,113,0.1); }
+
+    .progress-bar-wrap {
+      background: #fffde7;
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f0b400, #f5c800);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    .progress-label {
+      text-align: center;
+      font-size: 12px;
+      color: #764c0f;
+      margin-bottom: 32px;
+    }
+
+    /* Multiple choice */
+    .mc-question {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 32px;
+      padding: 32px;
+      background: #fffde7;
+      border-radius: 20px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .mc-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .mc-opt {
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: #fffde7;
+      color: #222222;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+      line-height: 1.3;
+    }
+
+    .mc-opt:hover:not(:disabled) { border-color: #f0b400; }
+    .mc-opt.correct { border-color: #4caf50 !important; background: rgba(78,203,113,0.12) !important; color: #4caf50; }
+    .mc-opt.wrong { border-color: #f0b400 !important; background: rgba(233,69,96,0.12) !important; color: #f0b400; }
+
+    /* Empty states */
+    .empty {
+      text-align: center;
+      padding: 80px 24px;
+      color: #764c0f;
+    }
+
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-title { font-family: 'Playfair Display', serif; font-size: 24px; color: #222222; margin-bottom: 8px; }
+    .empty-sub { font-size: 14px; line-height: 1.6; }
+
+    /* ── Add Word ── */
+    .add-word-bar {
+      margin-bottom: 20px;
+    }
+
+    .add-word-toggle-btn {
+      background: none;
+      border: 1px dashed rgba(0,0,0,0.2);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: #764c0f;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .add-word-toggle-btn:hover { border-color: #764c0f; background: #fffde7; }
+
+    .add-word-form-wrap {
+      margin-top: 12px;
+      background: #fffde7;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .add-word-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .add-word-field label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .add-word-input {
+      background: #ffffff;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #222222;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .add-word-input:focus { border-color: #f0b400; }
+    .add-word-input::placeholder { color: #764c0f; opacity: 0.5; }
+
+    .add-word-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .add-word-save-btn {
+      background: #f0b400;
+      color: #764c0f;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .add-word-save-btn:hover { background: #d4a000; }
+
+    .add-word-msg {
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      margin-top: 8px;
+    }
+    .add-word-msg.success { color: #4caf50; }
+    .add-word-msg.error { color: #e53935; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 24px 20px 20px; flex-direction: column; align-items: flex-start; }
+      main { padding: 0 20px 48px; }
+      .stats-row { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div id="directVisitBanner" style="display:none; background:#fffde7; border-bottom:2px solid #f0b400; padding:12px 48px; font-family:'DM Sans',sans-serif; font-size:13px; color:#555; text-align:center;">
+    ⚠️ <strong>Sign in via the Clicktionary extension</strong> — click the extension icon, sign in, then press "Open Word Bank & Practice".
+  </div>
+  <nav>
+    <div class="nav-logo">Click<span>tionary</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-view="bank">Word Bank</button>
+      <button class="nav-tab" data-view="practice">Practice</button>
+    </div>
+    <div class="nav-count" id="navCount">0 words</div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-title">Your<br><em>Word Bank</em></div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="num" id="statTotal">0</div>
+        <div class="lbl">Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statLearning">0</div>
+        <div class="lbl">Learning</div>
+      </div>
+      <div class="stat-card">
+        <div class="num" id="statMastered">0</div>
+        <div class="lbl">Mastered</div>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- Word Bank View -->
+    <div class="view active" id="view-bank">
+      <div class="toolbar">
+        <input class="search-box" id="searchBox" placeholder="Search words..." />
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="learning">Learning</button>
+        <button class="filter-btn" data-filter="mastered">Mastered</button>
+        <select id="langFilter" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:#fffde7;font-family:'DM Sans',sans-serif;font-size:13px;color:#222;cursor:pointer;outline:none">
+          <option value="all">All Languages</option>
+          <option value="es">🇪🇸 Spanish</option>
+          <option value="fr">🇫🇷 French</option>
+          <option value="de">🇩🇪 German</option>
+          <option value="it">🇮🇹 Italian</option>
+          <option value="pt">🇵🇹 Portuguese</option>
+          <option value="ru">🇷🇺 Russian</option>
+          <option value="zh">🇨🇳 Chinese</option>
+          <option value="ja">🇯🇵 Japanese</option>
+          <option value="ko">🇰🇷 Korean</option>
+          <option value="ar">🇸🇦 Arabic</option>
+        </select>
+        <button class="export-btn" id="exportQuizletBtn" title="Export visible words to Quizlet">Export to Quizlet</button>
+      </div>
+      <div class="add-word-bar">
+        <button class="add-word-toggle-btn" id="addWordToggle">＋ Add word manually</button>
+        <div id="addWordFormWrap" style="display:none">
+          <div class="add-word-form-wrap">
+            <div class="add-word-field">
+              <label>Word / phrase</label>
+              <input class="add-word-input" id="addTargetInput" placeholder="e.g. vainilla" />
+            </div>
+            <div class="add-word-field">
+              <label>English</label>
+              <input class="add-word-input" id="addEnglishInput" placeholder="e.g. vanilla" />
+            </div>
+            <div class="add-word-actions">
+              <button class="add-word-save-btn" id="addWordSaveBtn">Add to Word Bank</button>
+            </div>
+          </div>
+          <div class="add-word-msg" id="addWordMsg"></div>
+        </div>
+      </div>
+      <div class="word-grid" id="wordGrid"></div>
+    </div>
+
+    <!-- Practice View -->
+    <div class="view" id="view-practice">
+      <div class="practice-container">
+        <div class="practice-header">
+          <div class="practice-title">Practice</div>
+          <div class="mode-selector">
+            <button class="mode-btn active" data-mode="flashcard">Flashcards</button>
+            <button class="mode-btn" data-mode="mc">Multiple Choice</button>
+          </div>
+        </div>
+        <div id="practiceArea"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Data Layer ───────────────────────────────────────────────────────────────
+// Reads auth token from URL hash, fetches words from Supabase
+
+const SUPABASE_URL = 'https://incvqtbkfntzdvbingqv.supabase.co';
+
+const LANGUAGES = {
+  es: { name: 'Spanish',    flag: '🇪🇸' },
+  fr: { name: 'French',     flag: '🇫🇷' },
+  de: { name: 'German',     flag: '🇩🇪' },
+  it: { name: 'Italian',    flag: '🇮🇹' },
+  pt: { name: 'Portuguese', flag: '🇵🇹' },
+  ru: { name: 'Russian',    flag: '🇷🇺' },
+  zh: { name: 'Chinese',    flag: '🇨🇳' },
+  ja: { name: 'Japanese',   flag: '🇯🇵' },
+  ko: { name: 'Korean',     flag: '🇰🇷' },
+  ar: { name: 'Arabic',     flag: '🇸🇦' },
+};
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImluY3ZxdGJrZm50emR2YmluZ3F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzMTc3NzAsImV4cCI6MjA4OTg5Mzc3MH0.QCIoHwvt41QcLJ3ilSezTntNGzXyFFpHQf-7kz6mKzU';
+
+let authToken = null;
+let authUserId = null;
+
+function getUserIdFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub || null;
+  } catch (_) { return null; }
+}
+
+function getTokenFromHash() {
+  try {
+    const hash = window.location.hash;
+    const tokenMatch = hash.match(/token=([^&]+)/);
+    if (tokenMatch) return decodeURIComponent(tokenMatch[1]);
+  } catch (e) {}
+  return null;
+}
+
+function supabaseHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${authToken}`
+  };
+}
+
+const Store = {
+  async getWords() {
+    if (!authToken) return [];
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/words?select=*&order=added_at.desc`, {
+        headers: supabaseHeaders()
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.map(row => ({
+        id: row.id,
+        spanish: row.spanish,
+        english: row.english,
+        pos: row.pos,
+        strength: row.strength,
+        addedAt: row.added_at
+      }));
+    } catch (e) {
+      console.error('Clicktionary: failed to fetch words', e);
+      return [];
+    }
+  },
+  async deleteWord(id) {
+    if (!authToken) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/words?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders()
+    });
+    allWords = allWords.filter(w => w.id !== id);
+  },
+  async updateWord(id, updates) {
+    if (!authToken) return;
+    const body = {};
+    if (updates.strength !== undefined) body.strength = updates.strength;
+    await fetch(`${SUPABASE_URL}/rest/v1/words?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders(),
+      body: JSON.stringify(body)
+    });
+    const i = allWords.findIndex(w => w.id === id);
+    if (i > -1) allWords[i] = { ...allWords[i], ...updates };
+  }
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allWords = [];
+let currentFilter = 'all';
+let currentLangFilter = 'all';
+let searchQuery = '';
+let practiceMode = 'flashcard';
+let practiceQueue = [];
+let practiceIndex = 0;
+let isFlipped = false;
+
+// ── Strength Decay ────────────────────────────────────────────────────────────
+let reviewTimes = {};
+
+function loadReviewTimes() {
+  try { reviewTimes = JSON.parse(localStorage.getItem('ct_review_times') || '{}'); } catch (_) {}
+}
+
+function saveReviewTime(id) {
+  reviewTimes[String(id)] = Date.now();
+  try { localStorage.setItem('ct_review_times', JSON.stringify(reviewTimes)); } catch (_) {}
+}
+
+function effectiveStrength(word) {
+  const last = reviewTimes[String(word.id)];
+  const strength = word.strength || 0;
+  if (!last) return strength;
+  const daysSince = (Date.now() - last) / 86400000;
+  return Math.max(0, strength - Math.floor(daysSince / 7));
+}
+
+async function init() {
+  // 1. Try URL hash (passed by popup's "Open Word Bank" button)
+  authToken = getTokenFromHash();
+  if (authToken) {
+    authUserId = getUserIdFromToken(authToken);
+    history.replaceState(null, '', window.location.pathname);
+  }
+
+  // 2. If no URL token, ask the bridge content script for the stored session
+  if (!authToken) {
+    authToken = await new Promise((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 400);
+      window.addEventListener('message', function handler(e) {
+        const t = e.data?.type;
+        if (t === 'CLICKTIONARY_BRIDGE_READY' || t === 'CLICKTIONARY_SESSION_RESPONSE') {
+          clearTimeout(timeout);
+          window.removeEventListener('message', handler);
+          resolve(e.data?.session?.access_token || null);
+        }
+      });
+      window.postMessage({ type: 'CLICKTIONARY_GET_SESSION' }, '*');
+    });
+    if (authToken) authUserId = getUserIdFromToken(authToken);
+  }
+
+  if (!authToken) {
+    document.getElementById('directVisitBanner').style.display = 'block';
+    renderStats();
+    renderWordGrid();
+    return;
+  }
+
+  loadReviewTimes();
+  allWords = await Store.getWords();
+  renderStats();
+  renderWordGrid();
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const total = allWords.length;
+  const mastered = allWords.filter(w => w.strength >= 4).length;
+  const learning = total - mastered;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statLearning').textContent = learning;
+  document.getElementById('statMastered').textContent = mastered;
+  document.getElementById('navCount').textContent = `${total} word${total !== 1 ? 's' : ''}`;
+}
+
+// ── Word Bank ────────────────────────────────────────────────────────────────
+function filteredWords() {
+  let words = allWords;
+  if (currentFilter === 'learning') words = words.filter(w => w.strength < 4);
+  if (currentFilter === 'mastered') words = words.filter(w => w.strength >= 4);
+  if (currentLangFilter !== 'all') words = words.filter(w => (w.language || 'es') === currentLangFilter);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    words = words.filter(w => w.spanish.toLowerCase().includes(q) || (w.english || '').toLowerCase().includes(q));
+  }
+  return words;
+}
+
+function renderWordGrid() {
+  const grid = document.getElementById('wordGrid');
+  const words = filteredWords();
+  if (words.length === 0) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="empty-icon">📚</div>
+      <div class="empty-title">No words yet</div>
+      <div class="empty-sub">Highlight Spanish text on any webpage<br>and click "Add to Word Bank"</div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = words.map(w => {
+    const date = new Date(w.addedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const strength = w.strength || 0;
+    const effStr = effectiveStrength(w);
+    const isDue = effStr < strength;
+    const dots = Array.from({ length: 5 }, (_, i) =>
+      `<div class="dot ${i < effStr ? (effStr >= 4 ? 'filled' : 'partial') : ''}"></div>`
+    ).join('');
+    return `
+      <div class="word-card" data-id="${w.id}">
+        <div class="card-top">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <div class="card-es">${w.spanish}</div>
+            ${isDue ? `<div style="font-size:9px;color:#f0b400;background:rgba(240,180,0,0.12);border:1px solid rgba(240,180,0,0.35);border-radius:4px;padding:2px 6px;white-space:nowrap;flex-shrink:0">Due</div>` : ''}
+          </div>
+          <div style="display:flex;gap:2px">
+            <button class="card-edit" data-id="${w.id}" title="Edit">✎</button>
+            <button class="card-delete" data-id="${w.id}" title="Remove">✕</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
+          ${w.language && LANGUAGES[w.language] ? `<div style="font-size:10px;color:#764c0f;font-family:Arial,sans-serif">${LANGUAGES[w.language].flag} ${LANGUAGES[w.language].name}</div>` : ''}
+        </div>
+        <div class="card-en">${w.english || '—'}</div>
+        <div class="card-edit-form" style="display:none" data-id="${w.id}">
+          <input class="card-edit-input" data-field="spanish" value="${w.spanish}" placeholder="Word" />
+          <input class="card-edit-input" data-field="english" value="${w.english || ''}" placeholder="Translation" />
+          <div class="card-edit-actions">
+            <button class="card-edit-save" data-id="${w.id}">Save</button>
+            <button class="card-edit-cancel">Cancel</button>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="strength-dots">${dots}</div>
+          <div class="card-date">${date}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.card-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Remove "${btn.closest('.word-card').querySelector('.card-es').textContent}"?`)) return;
+      const id = Number(btn.dataset.id);
+      await Store.deleteWord(id);
+      allWords = allWords.filter(w => w.id !== id);
+      renderStats();
+      renderWordGrid();
+    });
+  });
+
+  grid.querySelectorAll('.card-edit').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = btn.closest('.word-card');
+      const form = card.querySelector('.card-edit-form');
+      form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+    });
+  });
+
+  grid.querySelectorAll('.card-edit-cancel').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      btn.closest('.card-edit-form').style.display = 'none';
+    });
+  });
+
+  grid.querySelectorAll('.card-edit-save').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.id);
+      const form = btn.closest('.card-edit-form');
+      const spanish = form.querySelector('[data-field="spanish"]').value.trim().toLowerCase();
+      const english = form.querySelector('[data-field="english"]').value.trim();
+      if (!spanish) return;
+      await fetch(`${SUPABASE_URL}/rest/v1/words?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { ...supabaseHeaders() },
+        body: JSON.stringify({ spanish, english })
+      });
+      const i = allWords.findIndex(w => w.id === id);
+      if (i > -1) allWords[i] = { ...allWords[i], spanish, english };
+      renderStats();
+      renderWordGrid();
+    });
+  });
+}
+
+// ── Practice ─────────────────────────────────────────────────────────────────
+function practiceWords() {
+  let words = allWords;
+  if (currentLangFilter !== 'all') words = words.filter(w => (w.language || 'es') === currentLangFilter);
+  return words;
+}
+
+function startPractice() {
+  practiceQueue = [...practiceWords()].sort((a, b) => {
+    const diff = effectiveStrength(a) - effectiveStrength(b);
+    return diff !== 0 ? diff : Math.random() - 0.5;
+  });
+  practiceIndex = 0;
+  isFlipped = false;
+  renderPractice();
+}
+
+function renderPractice() {
+  const area = document.getElementById('practiceArea');
+  if (practiceQueue.length < 2) {
+    area.innerHTML = `<div class="empty">
+      <div class="empty-icon">🎯</div>
+      <div class="empty-title">Not enough words</div>
+      <div class="empty-sub">Add at least 4 words to your word bank<br>to start practicing</div>
+    </div>`;
+    return;
+  }
+
+  if (practiceIndex >= practiceQueue.length) {
+    area.innerHTML = `<div class="empty">
+      <div class="empty-icon">🎉</div>
+      <div class="empty-title">Round complete!</div>
+      <div class="empty-sub">You reviewed all ${practiceQueue.length} words.</div>
+      <button onclick="startPractice()" style="margin-top:20px;padding:12px 32px;background:#f0b400;color:#764c0f;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s" onmouseover="this.style.background='#d4a000'" onmouseout="this.style.background='#f0b400'">Practice Again</button>
+    </div>`;
+    return;
+  }
+
+  const pct = Math.round((practiceIndex / practiceQueue.length) * 100);
+
+  if (practiceMode === 'flashcard') renderFlashcard(area, pct);
+  else renderMultipleChoice(area, pct);
+}
+
+function renderFlashcard(area, pct) {
+  const word = practiceQueue[practiceIndex];
+  area.innerHTML = `
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">${practiceIndex} / ${practiceQueue.length}</div>
+    <div class="flashcard-scene">
+      <div class="flashcard" id="theCard">
+        <div class="card-face card-front">
+          <div class="label">${LANGUAGES[word.language]?.flag || ''} ${LANGUAGES[word.language]?.name || 'Word'}</div>
+          <div class="main-word">${word.spanish}</div>
+          <div class="hint">Click to reveal</div>
+        </div>
+        <div class="card-face card-back">
+          <div class="label">English</div>
+          <div class="main-word">${word.english || '?'}</div>
+          ${word.pos ? `<div class="hint">${word.pos}</div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="card-controls" id="cardControls" style="display:none">
+      <button class="ctrl-btn wrong" data-result="0"><span class="icon">😕</span>Missed</button>
+      <button class="ctrl-btn hard" data-result="1"><span class="icon">🤔</span>Hard</button>
+      <button class="ctrl-btn correct" data-result="2"><span class="icon">✓</span>Got it!</button>
+    </div>
+  `;
+
+  document.getElementById('theCard').addEventListener('click', () => {
+    document.getElementById('theCard').classList.toggle('flipped');
+    document.getElementById('cardControls').style.display = 'flex';
+  });
+
+  document.querySelectorAll('.ctrl-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const result = Number(btn.dataset.result);
+      const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + result - 0.5));
+      const rounded = Math.round(newStrength);
+      await Store.updateWord(word.id, { strength: rounded });
+      saveReviewTime(word.id);
+      const wi = allWords.findIndex(w => w.id === word.id);
+      if (wi > -1) allWords[wi] = { ...allWords[wi], strength: rounded };
+      practiceIndex++;
+      renderPractice();
+    });
+  });
+}
+
+function renderMultipleChoice(area, pct) {
+  const word = practiceQueue[practiceIndex];
+  // Pick 3 random wrong answers
+  const others = practiceWords().filter(w => w.id !== word.id && w.english).sort(() => Math.random() - 0.5).slice(0, 3);
+  if (others.length < 3) { renderFlashcard(area, pct); return; }
+
+  const options = [...others.map(w => ({ text: w.english, correct: false })), { text: word.english, correct: true }]
+    .sort(() => Math.random() - 0.5);
+
+  area.innerHTML = `
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+    <div class="progress-label">${practiceIndex} / ${practiceQueue.length}</div>
+    <div class="mc-question">${word.spanish}</div>
+    <div class="mc-options">
+      ${options.map((o, i) => `<button class="mc-opt" data-correct="${o.correct}" data-idx="${i}">${o.text}</button>`).join('')}
+    </div>
+  `;
+
+  document.querySelectorAll('.mc-opt').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const correct = btn.dataset.correct === 'true';
+      document.querySelectorAll('.mc-opt').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.correct === 'true') b.classList.add('correct');
+        else if (b === btn && !correct) b.classList.add('wrong');
+      });
+      const delta = correct ? 1 : -1;
+      const newStrength = Math.max(0, Math.min(5, (word.strength || 0) + delta));
+      await Store.updateWord(word.id, { strength: newStrength });
+      saveReviewTime(word.id);
+      const wi = allWords.findIndex(w => w.id === word.id);
+      if (wi > -1) allWords[wi] = { ...allWords[wi], strength: newStrength };
+      setTimeout(() => { practiceIndex++; renderPractice(); }, 900);
+    });
+  });
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${tab.dataset.view}`).classList.add('active');
+    if (tab.dataset.view === 'practice') startPractice();
+  });
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderWordGrid();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  renderWordGrid();
+});
+
+document.getElementById('langFilter').addEventListener('change', e => {
+  currentLangFilter = e.target.value;
+  renderWordGrid();
+});
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    practiceMode = btn.dataset.mode;
+    startPractice();
+  });
+});
+
+// ── Add Word Manually ─────────────────────────────────────────────────────────
+document.getElementById('addWordToggle').addEventListener('click', () => {
+  const wrap = document.getElementById('addWordFormWrap');
+  const open = wrap.style.display === 'none';
+  wrap.style.display = open ? 'block' : 'none';
+  document.getElementById('addWordToggle').textContent = open ? '✕ Cancel' : '＋ Add word manually';
+  if (open) document.getElementById('addTargetInput').focus();
+});
+
+async function translateText(text, from, to) {
+  const encoded = encodeURIComponent(text.trim());
+  const instances = ['https://lingva.ml', 'https://translate.plausibility.cloud'];
+  const result = await Promise.any(
+    instances.map(base =>
+      fetch(`${base}/api/v1/${from}/${to}/${encoded}`, { signal: AbortSignal.timeout(2000) })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(d => {
+          if (!d?.translation || d.translation.toLowerCase() === text.toLowerCase()) return Promise.reject();
+          return d.translation;
+        })
+    )
+  ).catch(() => null);
+  if (result) return result;
+  // MyMemory fallback
+  try {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encoded}&langpair=${from}|${to}`, { signal: AbortSignal.timeout(2000) });
+    const d = await r.json();
+    const t = d?.responseData?.translatedText;
+    if (t && t.toLowerCase() !== text.trim().toLowerCase()) return t;
+  } catch (_) {}
+  return null;
+}
+
+document.getElementById('addWordSaveBtn').addEventListener('click', async () => {
+  const targetInput = document.getElementById('addTargetInput');
+  const englishInput = document.getElementById('addEnglishInput');
+  const msg = document.getElementById('addWordMsg');
+  const target = targetInput.value.trim();
+  const english = englishInput.value.trim();
+
+  if (!target && !english) { msg.className = 'add-word-msg error'; msg.textContent = 'Enter a word or translation.'; return; }
+
+  const btn = document.getElementById('addWordSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  msg.textContent = '';
+
+  let finalTarget = target;
+  let finalEnglish = english;
+
+  // Auto-translate missing field using the currently selected language
+  const langCode = document.getElementById('langFilter').value === 'all' ? 'es' : document.getElementById('langFilter').value;
+  if (finalTarget && !finalEnglish) {
+    finalEnglish = await translateText(finalTarget, langCode, 'en') || '';
+  } else if (!finalTarget && finalEnglish) {
+    finalTarget = await translateText(finalEnglish, 'en', langCode) || finalEnglish;
+  }
+
+  if (!authToken) { msg.className = 'add-word-msg error'; msg.textContent = 'Sign in via the extension first.'; btn.disabled = false; btn.textContent = 'Add to Word Bank'; return; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/words`, {
+      method: 'POST',
+      headers: { ...supabaseHeaders(), 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ user_id: authUserId, spanish: finalTarget.toLowerCase(), english: finalEnglish, pos: '', strength: 0, language: langCode, added_at: new Date().toISOString() })
+    });
+    if (res.ok || res.status === 201) {
+      msg.className = 'add-word-msg success'; msg.textContent = '✓ Saved!';
+      targetInput.value = ''; englishInput.value = '';
+      allWords = await Store.getWords();
+      renderStats(); renderWordGrid();
+      setTimeout(() => { msg.textContent = ''; }, 2000);
+    } else {
+      msg.className = 'add-word-msg error'; msg.textContent = 'Failed to save. Try again.';
+    }
+  } catch (e) {
+    msg.className = 'add-word-msg error'; msg.textContent = 'Network error.';
+  }
+  btn.disabled = false; btn.textContent = 'Add to Word Bank';
+});
+
+// ── Export to Quizlet ─────────────────────────────────────────────────────────
+document.getElementById('exportQuizletBtn').addEventListener('click', async () => {
+  const words = filteredWords();
+  if (!words.length) return;
+
+  // Quizlet import format: term[tab]definition, one pair per line
+  const tsv = words.map(w => `${w.spanish}\t${w.english || ''}`).join('\n');
+
+  const btn = document.getElementById('exportQuizletBtn');
+  try {
+    await navigator.clipboard.writeText(tsv);
+    btn.textContent = '✓ Copied to clipboard!';
+    btn.classList.add('copied');
+    btn.disabled = true;
+    window.open('https://quizlet.com/create-set', '_blank');
+    setTimeout(() => { btn.textContent = 'Export to Quizlet'; btn.classList.remove('copied'); btn.disabled = false; }, 3000);
+  } catch (_) {
+    btn.textContent = 'Copy failed — try again';
+    setTimeout(() => { btn.textContent = 'Export to Quizlet'; }, 2000);
+  }
+});
+
+init();
+</script>
+</body>
+</html>

@@ -153,7 +153,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .ct-add-btn {
@@ -185,12 +184,10 @@
   font-family: 'Arial', sans-serif;
   font-weight: 700;
   cursor: pointer;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   transition: background 0.15s, transform 0.1s;
   display: none;
   align-items: center;
-  width: 100%;
-  justify-content: center;
 }
 .ct-quizlet-btn:hover { background: #3547e0; transform: scale(1.03); }
 .ct-quizlet-btn:active { transform: scale(0.98); }

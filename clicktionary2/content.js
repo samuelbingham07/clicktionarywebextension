@@ -51,7 +51,7 @@ function createTooltip() {
     </div>
     <div class="ct-footer">
       <button class="ct-add-btn">＋ Add to Word Bank</button>
-      <button class="ct-quizlet-btn" title="Copy term + definition for Quizlet Import">Export Set to Quizlet</button>
+      <button class="ct-quizlet-btn" title="Send to Quizlet">Q</button>
       <span class="ct-saved-msg">✓ Saved!</span>
     </div>
   `;
@@ -105,8 +105,6 @@ function hideTooltip() {
 const LINGVA_INSTANCES = [
   'https://lingva.ml',
   'https://translate.plausibility.cloud',
-  'https://lingva.thedaviddelta.com',
-  'https://lingva.garudalinux.org',
 ];
 
 const MYMEMORY_CODES = { zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR' };
@@ -132,52 +130,6 @@ function stripClitics(word) {
   const stripped = w.replace(CLITIC_RE, '');
   if (stripped === w || stripped.length < 2) return null;
   return VERB_STEM_RE.test(stripped) ? stripped : null;
-}
-
-// ── Fetch translation (Lingva → MyMemory fallback) ──────────────────────────
-const LANG_BUNDLES = { es: typeof ES_BUNDLE !== 'undefined' ? ES_BUNDLE : null };
-
-async function fetchTranslation(word, langCode) {
-  if (langCode.startsWith('custom_')) return null;
-  const bundle = LANG_BUNDLES[langCode];
-  if (bundle) {
-    const entry = bundle.get(word.toLowerCase().trim());
-    if (entry) return entry[0];
-  }
-  const encoded = encodeURIComponent(word.trim());
-  return Promise.any(
-    LINGVA_INSTANCES.map(base =>
-      fetchWithTimeout(`${base}/api/v1/${LINGVA_CODES[langCode] || langCode}/en/${encoded}`)
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(data => { const t = data?.translation; if (!t) return Promise.reject(); return t; })
-    )
-  ).catch(async () => {
-    try {
-      const mmCode = MYMEMORY_CODES[langCode] || langCode;
-      const r = await fetchWithTimeout(
-        `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
-      );
-      if (r.ok) {
-        const data = await r.json();
-        const t = data?.responseData?.translatedText;
-        if (t) return t;
-      }
-    } catch (_) {}
-    return null;
-  });
-}
-
-// ── Fetch dict (Wiktionary + clitic fallback) ────────────────────────────────
-async function fetchDict(word, langCode) {
-  const clean = word.trim();
-  const result = await fetchWiktionaryDefinition(clean, langCode);
-  if (result) return result;
-  const base = stripClitics(clean);
-  if (base && base !== clean) {
-    const baseResult = await fetchWiktionaryDefinition(base, langCode);
-    if (baseResult) return { ...baseResult, baseForm: base };
-  }
-  return null;
 }
 
 // ── Fetch definition from Wiktionary for the original foreign word ───────────
@@ -236,15 +188,54 @@ async function fetchWiktionaryDefinition(word, langCode) {
   }
 }
 
-// ── Fetch combined result (used by prefetch) ─────────────────────────────────
+// ── Fetch translation + dictionary definition in parallel ────────────────────
 async function fetchDefinition(word, langCode) {
   const cacheKey = `${langCode}:${word.toLowerCase()}`;
   if (defCache.has(cacheKey)) return defCache.get(cacheKey);
   const clean = word.trim();
+  const encoded = encodeURIComponent(clean);
 
+  // Custom language codes (e.g. custom_1234) have no translation API support
+  const isCustomLang = langCode.startsWith('custom_');
+
+  // Run translation and Wiktionary lookup simultaneously
   const [translation, dict] = await Promise.all([
-    fetchTranslation(clean, langCode),
-    fetchDict(clean, langCode)
+    // Translation: Lingva (parallel race) → MyMemory fallback
+    isCustomLang ? Promise.resolve(null) : Promise.any(
+      LINGVA_INSTANCES.map(base =>
+        fetchWithTimeout(`${base}/api/v1/${LINGVA_CODES[langCode] || langCode}/en/${encoded}`)
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            const t = data?.translation;
+            if (!t) return Promise.reject();
+            return t;
+          })
+      )
+    ).catch(async () => {
+      try {
+        const mmCode = MYMEMORY_CODES[langCode] || langCode;
+        const r = await fetchWithTimeout(
+          `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${mmCode}|en`
+        );
+        if (r.ok) {
+          const data = await r.json();
+          const t = data?.responseData?.translatedText;
+          if (t) return t;
+        }
+      } catch (_) {}
+      return null;
+    }),
+    // Dictionary: Wiktionary for all languages, clitic fallback for missed verb forms
+    (async () => {
+      const result = await fetchWiktionaryDefinition(clean, langCode);
+      if (result) return result;
+      const base = stripClitics(clean);
+      if (base && base !== clean) {
+        const baseResult = await fetchWiktionaryDefinition(base, langCode);
+        if (baseResult) return { ...baseResult, baseForm: base };
+      }
+      return null;
+    })()
   ]);
 
   if (!translation && !dict) {
@@ -265,6 +256,11 @@ function couldBeSelectedLanguage(text, langCode) {
   if (langCode === 'ko') return /[\uac00-\ud7af]/.test(text);
   if (langCode === 'ar') return /[\u0600-\u06ff]/.test(text);
   if (langCode === 'ru') return /[\u0400-\u04ff]/.test(text);
+  // Latin-script languages — suppress on clearly English pages
+  const pageLang = (document.documentElement.lang || '').toLowerCase();
+  if (pageLang.startsWith('en') && !pageLang.startsWith(langCode)) {
+    return /[À-ž]/.test(text); // require at least one accented char on English pages
+  }
   return /[a-zA-ZÀ-ž]/.test(text);
 }
 
@@ -342,26 +338,31 @@ if (document.readyState === 'loading') {
 // ── Main: handle text selection ─────────────────────────────────────────────
 let lastWord = '';
 let lastDefinition = null;
+let selectionDebounce = null;
 let requestId = 0; // incremented on every new mouseup; stale async calls check this
 
 document.addEventListener('mouseup', (e) => {
   if (e.target.closest('#clicktionary-tooltip')) return;
 
+  clearTimeout(selectionDebounce);
   clearTimeout(hideTimeout);
   const myId = ++requestId;
 
-  // chrome.storage.local.get is always async, so if two mouseups fire in rapid
-  // succession (e.g. double-click), both callbacks check myId !== requestId and
-  // only the last one proceeds — same protection the old 50ms debounce gave.
-  try {
-    chrome.storage.local.get('extensionOff', (r) => {
-      if (myId !== requestId) return;
-      if (r.extensionOff) { hideTooltip(); return; }
-      handleSelection(myId);
-    });
-  } catch (_) {
-    // Extension context invalidated (e.g. after a reload) — do nothing
-  }
+  // Debounce 50ms so the final mouseup of a double-click wins.
+  // Reading storage inside the timeout means the value is always fresh —
+  // no race condition if the user toggles off and highlights immediately.
+  selectionDebounce = setTimeout(() => {
+    if (myId !== requestId) return;
+    try {
+      chrome.storage.local.get('extensionOff', (r) => {
+        if (myId !== requestId) return;
+        if (r.extensionOff) { hideTooltip(); return; }
+        handleSelection(myId);
+      });
+    } catch (_) {
+      // Extension context invalidated (e.g. after a reload) — do nothing
+    }
+  }, 50);
 });
 
 async function handleSelection(myId) {
@@ -396,95 +397,49 @@ async function handleSelection(myId) {
 
   positionTooltip(rect);
 
-  const cacheKey = `${currentLanguage}:${text.toLowerCase()}`;
+  const def = await fetchDefinition(text, currentLanguage);
 
-  // Cache hit — show everything at once instantly
-  if (defCache.has(cacheKey)) {
-    const def = defCache.get(cacheKey);
-    lastDefinition = def;
-    t.querySelector('.ct-loading').style.display = 'none';
-    if (def) {
-      t.querySelector('.ct-translation').textContent = def.translation || '';
-      renderDict(t, def.dict);
-      t.querySelector('.ct-result').style.display = 'block';
-      t.querySelector('.ct-add-btn').style.display = 'inline-flex';
-      t.querySelector('.ct-quizlet-btn').style.display = 'inline-flex';
-    } else {
-      t.querySelector('.ct-custom-input').value = '';
-      t.querySelector('.ct-error').style.display = 'block';
-    }
-    return;
-  }
-
-  // Cache miss — show translation the moment it arrives, fill dict data after
-  const clean = text.trim();
-  let resolvedTranslation = null;
-  let resolvedDict = null;
-
-  const translationPromise = fetchTranslation(clean, currentLanguage).then(result => {
-    resolvedTranslation = result;
-    if (myId !== requestId) return;
-    if (result) {
-      t.querySelector('.ct-loading').style.display = 'none';
-      t.querySelector('.ct-translation').textContent = result;
-      t.querySelector('.ct-result').style.display = 'block';
-      t.querySelector('.ct-add-btn').style.display = 'inline-flex';
-      t.querySelector('.ct-quizlet-btn').style.display = 'inline-flex';
-      lastDefinition = { word: clean, translation: result, dict: null };
-    }
-  });
-
-  const dictPromise = fetchDict(clean, currentLanguage).then(result => {
-    resolvedDict = result;
-    if (myId !== requestId || !result) return;
-    renderDict(t, result);
-    if (lastDefinition) lastDefinition = { ...lastDefinition, dict: result };
-  });
-
-  await Promise.all([translationPromise, dictPromise]);
+  // If a newer mouseup fired while we were fetching, discard this result
   if (myId !== requestId) return;
 
-  if (!resolvedTranslation && !resolvedDict) {
-    defCache.set(cacheKey, null);
-    t.querySelector('.ct-loading').style.display = 'none';
-    t.querySelector('.ct-custom-input').value = '';
-    t.querySelector('.ct-error').style.display = 'block';
-    lastDefinition = null;
-    return;
-  }
+  lastDefinition = def;
+  t.querySelector('.ct-loading').style.display = 'none';
 
-  // Translation was null but dict arrived — show result now
-  if (!resolvedTranslation && resolvedDict) {
-    t.querySelector('.ct-loading').style.display = 'none';
-    t.querySelector('.ct-translation').textContent = '';
+  if (def) {
+    t.querySelector('.ct-translation').textContent = def.translation || '';
+
+    const { dict } = def;
+    if (dict) {
+      // Part of speech + gender (e.g. "noun · masculine"), with base form if clitics stripped
+      const posLabel = [dict.pos, dict.gram].filter(Boolean).join(' · ');
+      const baseNote = dict.baseForm ? ` · from ${dict.baseForm}` : '';
+      t.querySelector('.ct-pos').textContent = posLabel ? `(${posLabel}${baseNote})` : '';
+
+      // For conjugated verbs MW returns the infinitive instead of definitions
+      if (dict.infinitive && !dict.meanings?.length) {
+        t.querySelector('.ct-definition').textContent = `→ ${dict.infinitive}`;
+      } else if (dict.meanings?.length) {
+        const lines = dict.meanings.map((m, i) => `${i + 1}. ${m.text}`);
+        t.querySelector('.ct-definition').textContent = lines.join('\n');
+      } else {
+        t.querySelector('.ct-definition').textContent = '';
+      }
+
+      t.querySelector('.ct-examples').textContent = dict.example ? `"${dict.example}"` : '';
+    } else {
+      t.querySelector('.ct-pos').textContent = '';
+      t.querySelector('.ct-definition').textContent = '';
+      t.querySelector('.ct-examples').textContent = '';
+    }
+
     t.querySelector('.ct-result').style.display = 'block';
     t.querySelector('.ct-add-btn').style.display = 'inline-flex';
     t.querySelector('.ct-quizlet-btn').style.display = 'inline-flex';
-    lastDefinition = { word: clean, translation: '', dict: resolvedDict };
-  }
-
-  defCache.set(cacheKey, { word: clean, translation: resolvedTranslation || '', dict: resolvedDict });
-  lastDefinition = defCache.get(cacheKey);
-}
-
-function renderDict(t, dict) {
-  if (!dict) {
-    t.querySelector('.ct-pos').textContent = '';
-    t.querySelector('.ct-definition').textContent = '';
-    t.querySelector('.ct-examples').textContent = '';
-    return;
-  }
-  const posLabel = [dict.pos, dict.gram].filter(Boolean).join(' · ');
-  const baseNote = dict.baseForm ? ` · from ${dict.baseForm}` : '';
-  t.querySelector('.ct-pos').textContent = posLabel ? `(${posLabel}${baseNote})` : '';
-  if (dict.infinitive && !dict.meanings?.length) {
-    t.querySelector('.ct-definition').textContent = `→ ${dict.infinitive}`;
-  } else if (dict.meanings?.length) {
-    t.querySelector('.ct-definition').textContent = dict.meanings.map((m, i) => `${i + 1}. ${m.text}`).join('\n');
   } else {
-    t.querySelector('.ct-definition').textContent = '';
+    t.querySelector('.ct-custom-input').value = '';
+    t.querySelector('.ct-error').style.display = 'block';
+    // add button stays hidden until user types their own definition
   }
-  t.querySelector('.ct-examples').textContent = dict.example ? `"${dict.example}"` : '';
 }
 
 // ── Add to Word Bank ────────────────────────────────────────────────────────
@@ -530,28 +485,41 @@ async function addToWordBank() {
   }
 }
 
-// ── Export to Quizlet (clipboard) ───────────────────────────────────────────
-function sendToQuizlet() {
+// ── Send to Quizlet ─────────────────────────────────────────────────────────
+async function sendToQuizlet() {
   if (!lastWord) return;
   const t = getTooltip();
   const customInput = t.querySelector('.ct-custom-input');
-  const dictFallback = lastDefinition?.dict?.meanings?.[0]?.text || '';
-  const definition = lastDefinition?.translation || dictFallback || customInput.value.trim();
+  const definition = lastDefinition?.translation || customInput.value.trim();
   if (!definition) return;
 
   const btn = t.querySelector('.ct-quizlet-btn');
-  // Tab-separated: Quizlet's Import expects "term\tdefinition" per line
-  navigator.clipboard.writeText(`${lastWord}\t${definition}`).then(() => {
-    btn.textContent = '✓ Copied!';
-    btn.disabled = true;
-    setTimeout(() => {
-      btn.textContent = 'Export Set to Quizlet';
-      btn.disabled = false;
-    }, 2000);
-  }).catch(() => {
-    btn.textContent = '✕ Failed';
-    setTimeout(() => { btn.textContent = 'Export Set to Quizlet'; }, 2000);
-  });
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  let response;
+  try {
+    response = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { type: 'SEND_TO_QUIZLET', term: lastWord, definition },
+        r => chrome.runtime.lastError ? reject(chrome.runtime.lastError) : resolve(r)
+      );
+    });
+  } catch (_) {
+    btn.textContent = '↺';
+    btn.title = 'Reload this page to reconnect the extension, then try again.';
+    btn.disabled = false;
+    return;
+  }
+
+  if (response?.success) {
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = 'Q'; btn.disabled = false; }, 2000);
+  } else {
+    btn.textContent = '✕';
+    btn.title = response?.error || 'Failed to send to Quizlet';
+    setTimeout(() => { btn.textContent = 'Q'; btn.title = 'Send to Quizlet'; btn.disabled = false; }, 2500);
+  }
 }
 
 // ── Close on outside click + speculative prefetch ───────────────────────────

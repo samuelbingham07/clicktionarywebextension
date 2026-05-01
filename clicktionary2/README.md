@@ -13,8 +13,8 @@ clicktionarywebextension/
 ├── manifest.json          ← Extension config (MV3)
 ├── content.js             ← Tooltip on text highlight, translation lookup, word saving
 ├── content.css            ← Tooltip styles
-├── es-dict.js             ← Bundled Spanish dictionary (~1 100 words + phrases, instant offline lookup)
-├── background.js          ← Service worker: auth, Supabase sync, word bank
+├── background.js          ← Service worker: auth, Supabase sync, word bank, Quizlet routing
+├── quizlet-content.js     ← Content script injected into Quizlet editor pages for card injection
 ├── bridge.js              ← Content script injected into GitHub Pages site for auth sync
 ├── popup.html             ← Extension popup UI
 ├── popup.js               ← Popup logic: word list, language selector, auth
@@ -36,10 +36,7 @@ clicktionarywebextension/
 5. **Practice** on the word bank site with flashcards, multiple choice, and mastery tracking
 
 ### Translation pipeline
-- **Bundled dictionary** (`es-dict.js`): ~1 100 common Spanish words and phrases resolve instantly with zero network calls. Common multi-word phrases (`soy de`, `tengo que`, `voy a`, etc.) are included.
-- Lingva instances (4) are queried in parallel via `Promise.any()` with a 2s timeout — fastest one wins — for words not in the bundle
-- MyMemory is the final fallback if all Lingva instances fail
-- **Progressive display**: translation is shown as soon as Lingva responds; Wiktionary dictionary data (POS, definitions, examples) fills in afterwards
+- Lingva instances are queried in parallel via `Promise.any()` with a 2s timeout — fastest one wins
 - On page load, the extension silently prefetches definitions for the 10 hardest words on the page (longest unique words = statistically less common vocabulary)
 - Results are cached in memory so repeat lookups are instant
 
@@ -72,11 +69,8 @@ Go to `chrome://extensions`, click the **reload icon** on Clicktionary, then rel
 
 ## Features
 
-- **Export Set to Quizlet** button on tooltip copies `term\tdefinition` to clipboard (paste into Quizlet → Create set → Import)
 - Tooltip translation for any highlighted text, 10 languages
-- Bundled Spanish dictionary for instant offline lookup (~1 100 words + phrases)
-- Progressive display: translation shown immediately, dictionary data filled in after
-- Parallel Lingva instances (4) with MyMemory fallback for non-bundled words
+- Parallel Lingva instances with MyMemory fallback
 - Speculative prefetch of hard vocabulary on page load
 - In-memory translation cache (instant repeat lookups)
 - Add to word bank with duplicate detection

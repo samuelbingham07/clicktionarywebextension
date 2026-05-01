@@ -187,24 +187,18 @@ async function signOut() {
 }
 
 async function refreshSession() {
-  const result = await chrome.storage.local.get('supabase_session');
-  const session = result.supabase_session || null;
+  const session = await getSession();
   if (!session?.refresh_token) return null;
-  try {
-    const res = await Promise.race([
-      fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-        body: JSON.stringify({ refresh_token: session.refresh_token })
-      }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
-    ]);
-    const data = await res.json();
-    if (data.access_token) {
-      await chrome.storage.local.set({ supabase_session: data });
-      return data;
-    }
-  } catch (_) {}
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+    body: JSON.stringify({ refresh_token: session.refresh_token })
+  });
+  const data = await res.json();
+  if (data.access_token) {
+    await chrome.storage.local.set({ supabase_session: data });
+    return data;
+  }
   return null;
 }
 
@@ -352,7 +346,129 @@ async function updateWord(id, updates) {
   return true;
 }
 
+// ── Quizlet integration ───────────────────────────────────────────────────────
 
+const QUIZLET_EDITOR_PATTERNS = [
+  /^https:\/\/quizlet\.com\/create-set/,
+  /^https:\/\/quizlet\.com\/[^/]+\/edit/,
+  /^https:\/\/quizlet\.com\/[^/]+\/autosaved/,
+];
+
+function isQuizletEditorTab(url) {
+  return url && QUIZLET_EDITOR_PATTERNS.some(p => p.test(url));
+}
+
+// Runs in the page's MAIN world — same JS context as ProseMirror
+// Must be declared async so chrome.scripting.executeScript awaits the result
+async function quizletFillCard(term, definition) {
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  term = term.replace(/\.+$/, '').trim();
+  definition = definition.replace(/\.+$/, '').trim();
+
+  function allPm() {
+    return [...document.querySelectorAll('[pm-placeholder]')];
+  }
+  function isDefinitionField(el) {
+    const p = el.getAttribute('pm-placeholder').toLowerCase();
+    return p.includes('definition') || p.includes('english');
+  }
+  function isTermField(el) { return !isDefinitionField(el); }
+  function isEmpty(el) { return !el.textContent.trim(); }
+
+  function fill(el, value) {
+    el.focus();
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    // Dispatch beforeinput — ProseMirror's primary input handler
+    el.dispatchEvent(new InputEvent('beforeinput', {
+      bubbles: true, cancelable: true, inputType: 'insertText', data: value
+    }));
+    // Also try execCommand as fallback
+    if (!el.textContent.trim()) {
+      document.execCommand('insertText', false, value);
+    }
+  }
+
+  // Find the last empty term field
+  let termEl = allPm().filter(isTermField).reverse().find(isEmpty);
+
+  if (!termEl) {
+    // Click Add card
+    const btn = [...document.querySelectorAll('button')].find(b => /add\s*(a\s*)?card/i.test(b.textContent));
+    if (!btn) return { success: false, error: 'No "Add card" button found.' };
+    const before = allPm().filter(isTermField).length;
+    btn.click();
+    for (let i = 0; i < 20; i++) {
+      await wait(100);
+      if (allPm().filter(isTermField).length > before) break;
+    }
+    termEl = allPm().filter(isTermField).reverse().find(isEmpty);
+  }
+
+  if (!termEl) return { success: false, error: 'No empty term slot found.' };
+
+  // Mark the card's parent so we can find the definition field even after React re-renders
+  const card = termEl.closest('li, [class*="TermRow"], [class*="SetEditorRow"]') || termEl.parentElement;
+  card.setAttribute('data-ct-card', 'true');
+
+  console.log('[Clicktionary MAIN] termEl placeholder:', termEl.getAttribute('pm-placeholder'));
+  fill(termEl, term);
+  await wait(300);
+
+  // Find definition field within the same card by marker
+  let defEl = null;
+  for (let i = 0; i < 15; i++) {
+    await wait(100);
+    const markedCard = document.querySelector('[data-ct-card]');
+    if (markedCard) {
+      defEl = [...markedCard.querySelectorAll('[pm-placeholder]')].find(isDefinitionField);
+    }
+    // Fallback: scan all pm fields
+    if (!defEl) defEl = allPm().find(el => isDefinitionField(el) && isEmpty(el));
+    if (defEl) break;
+  }
+  if (card) card.removeAttribute('data-ct-card');
+
+  if (!defEl) return { success: false, error: 'Definition field not found.' };
+
+  console.log('[Clicktionary MAIN] defEl placeholder:', defEl.getAttribute('pm-placeholder'));
+  fill(defEl, definition);
+  await wait(200);
+  console.log('[Clicktionary MAIN] defEl content after fill:', defEl.textContent);
+
+  return { success: true };
+}
+
+async function sendToQuizlet(term, definition) {
+  const tabs = await chrome.tabs.query({ url: 'https://quizlet.com/*' });
+  const editorTab = tabs.find(t => isQuizletEditorTab(t.url));
+
+  if (editorTab) {
+    await chrome.tabs.update(editorTab.id, { active: true });
+    await chrome.windows.update(editorTab.windowId, { focused: true });
+    // Small delay to let the tab come into focus before scripting
+    await new Promise(r => setTimeout(r, 300));
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: editorTab.id },
+        world: 'MAIN',
+        func: quizletFillCard,
+        args: [term, definition]
+      });
+      return results[0]?.result || { success: false, error: 'No result from script.' };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }
+
+  // No editor tab — open create-set and queue the card
+  await chrome.storage.local.set({ quizletPending: { term, definition } });
+  chrome.tabs.create({ url: 'https://quizlet.com/create-set' });
+  return { success: true, opened: true };
+}
 
 // ── Message handler ───────────────────────────────────────────────────────────
 
@@ -420,7 +536,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true;
   }
-
+  if (message.type === 'SEND_TO_QUIZLET') {
+    sendToQuizlet(message.term, message.definition).then(sendResponse);
+    return true;
+  }
   if (message.type === 'ADD_WORD') {
     addWord(message.entry).then(success => sendResponse({ success }));
     return true;
