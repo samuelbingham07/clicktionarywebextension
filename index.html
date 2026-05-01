@@ -217,6 +217,57 @@
     .export-btn.copied { background: #16a34a; cursor: default; }
     .export-btn:disabled { opacity: 0.7; cursor: default; }
 
+    .new-bank-btn {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px dashed rgba(0,0,0,0.2);
+      background: transparent;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .new-bank-btn:hover { border-color: #f0b400; background: #fffde7; }
+
+    .new-bank-form {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 12px 16px;
+      background: #fffde7;
+      border: 1px solid #f0d9a0;
+      border-radius: 10px;
+    }
+    .new-bank-form input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid #f0d9a0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      outline: none;
+      background: #fff;
+    }
+    .new-bank-form input:focus { border-color: #f0b400; }
+    .new-bank-form button {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      background: #f0b400;
+      color: #764c0f;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .new-bank-form button:hover { background: #d4a000; }
+    .new-bank-form .cancel-bank { background: transparent; color: #aaa; border: 1px solid #ddd; }
+    .new-bank-form .cancel-bank:hover { background: #f5f5f5; }
+
     .word-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -722,7 +773,13 @@
           <option value="ko">🇰🇷 Korean</option>
           <option value="ar">🇸🇦 Arabic</option>
         </select>
+        <button class="new-bank-btn" id="newBankBtn">＋ New word bank</button>
         <button class="export-btn" id="exportQuizletBtn" title="Export visible words to Quizlet">Export to Quizlet</button>
+      </div>
+      <div class="new-bank-form" id="newBankForm">
+        <input id="newBankInput" placeholder='Name, e.g. "Travel Italian"' />
+        <button id="newBankSave">Create</button>
+        <button class="cancel-bank" id="newBankCancel">Cancel</button>
       </div>
       <div class="add-word-bar">
         <button class="add-word-toggle-btn" id="addWordToggle">＋ Add word manually</button>
@@ -784,6 +841,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let authToken = null;
 let authUserId = null;
+let customLanguages = [];
 
 function getUserIdFromToken(token) {
   try {
@@ -916,9 +974,44 @@ async function init() {
   }
 
   loadReviewTimes();
-  allWords = await Store.getWords();
+  [allWords, customLanguages] = await Promise.all([Store.getWords(), loadCustomLanguages()]);
+  populateLangFilter();
   renderStats();
   renderWordGrid();
+}
+
+function loadCustomLanguages() {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve([]), 400);
+    window.addEventListener('message', function handler(e) {
+      if (e.data?.type === 'CLICKTIONARY_CUSTOM_LANGUAGES_RESPONSE') {
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        resolve(e.data.customLanguages || []);
+      }
+    });
+    window.postMessage({ type: 'CLICKTIONARY_GET_CUSTOM_LANGUAGES' }, '*');
+  });
+}
+
+function populateLangFilter() {
+  const select = document.getElementById('langFilter');
+  // Remove any previously added custom options
+  [...select.options].forEach(o => { if (o.dataset.custom) o.remove(); });
+  if (customLanguages.length > 0) {
+    const divider = document.createElement('option');
+    divider.disabled = true;
+    divider.textContent = '── Custom word banks ──';
+    divider.dataset.custom = '1';
+    select.appendChild(divider);
+    customLanguages.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.code;
+      opt.textContent = `${l.flag} ${l.name}`;
+      opt.dataset.custom = '1';
+      select.appendChild(opt);
+    });
+  }
 }
 
 // ── Stats ────────────────────────────────────────────────────────────────────
@@ -979,7 +1072,7 @@ function renderWordGrid() {
         </div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
           ${w.pos ? `<div class="card-pos">${w.pos}</div>` : ''}
-          ${w.language && LANGUAGES[w.language] ? `<div style="font-size:10px;color:#764c0f;font-family:Arial,sans-serif">${LANGUAGES[w.language].flag} ${LANGUAGES[w.language].name}</div>` : ''}
+          ${w.language ? (() => { const l = LANGUAGES[w.language] || customLanguages.find(c => c.code === w.language); return l ? `<div style="font-size:10px;color:#764c0f;font-family:Arial,sans-serif">${l.flag} ${l.name}</div>` : ''; })() : ''}
         </div>
         <div class="card-en">${w.english || '—'}</div>
         <div class="card-edit-form" style="display:none" data-id="${w.id}">
@@ -1098,7 +1191,7 @@ function renderFlashcard(area, pct) {
     <div class="flashcard-scene">
       <div class="flashcard" id="theCard">
         <div class="card-face card-front">
-          <div class="label">${LANGUAGES[word.language]?.flag || ''} ${LANGUAGES[word.language]?.name || 'Word'}</div>
+          <div class="label">${(() => { const l = LANGUAGES[word.language] || customLanguages.find(c => c.code === word.language); return l ? `${l.flag} ${l.name}` : 'Word'; })()}</div>
           <div class="main-word">${word.spanish}</div>
           <div class="hint">Click to reveal</div>
         </div>
@@ -1212,6 +1305,48 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
   });
 });
 
+// ── New Word Bank ─────────────────────────────────────────────────────────────
+document.getElementById('newBankBtn').addEventListener('click', () => {
+  const form = document.getElementById('newBankForm');
+  form.style.display = 'flex';
+  document.getElementById('newBankInput').focus();
+});
+
+document.getElementById('newBankCancel').addEventListener('click', () => {
+  document.getElementById('newBankForm').style.display = 'none';
+  document.getElementById('newBankInput').value = '';
+});
+
+document.getElementById('newBankInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('newBankSave').click();
+  if (e.key === 'Escape') document.getElementById('newBankCancel').click();
+});
+
+document.getElementById('newBankSave').addEventListener('click', () => {
+  const name = document.getElementById('newBankInput').value.trim();
+  if (!name) return;
+  const btn = document.getElementById('newBankSave');
+  btn.disabled = true;
+  btn.textContent = 'Creating…';
+
+  window.addEventListener('message', function handler(e) {
+    if (e.data?.type !== 'CLICKTIONARY_ADD_CUSTOM_LANGUAGE_RESPONSE') return;
+    window.removeEventListener('message', handler);
+    const lang = e.data.customLanguage;
+    customLanguages.push(lang);
+    populateLangFilter();
+    document.getElementById('langFilter').value = lang.code;
+    currentLangFilter = lang.code;
+    renderWordGrid();
+    document.getElementById('newBankForm').style.display = 'none';
+    document.getElementById('newBankInput').value = '';
+    btn.disabled = false;
+    btn.textContent = 'Create';
+  });
+
+  window.postMessage({ type: 'CLICKTIONARY_ADD_CUSTOM_LANGUAGE', payload: { name } }, '*');
+});
+
 // ── Add Word Manually ─────────────────────────────────────────────────────────
 document.getElementById('addWordToggle').addEventListener('click', () => {
   const wrap = document.getElementById('addWordFormWrap');
@@ -1263,11 +1398,15 @@ document.getElementById('addWordSaveBtn').addEventListener('click', async () => 
   let finalEnglish = english;
 
   // Auto-translate missing field using the currently selected language
+  // Custom word banks (custom_*) have no translation API support — skip auto-translate
   const langCode = document.getElementById('langFilter').value === 'all' ? 'es' : document.getElementById('langFilter').value;
-  if (finalTarget && !finalEnglish) {
-    finalEnglish = await translateText(finalTarget, langCode, 'en') || '';
-  } else if (!finalTarget && finalEnglish) {
-    finalTarget = await translateText(finalEnglish, 'en', langCode) || finalEnglish;
+  const isCustomLang = langCode.startsWith('custom_');
+  if (!isCustomLang) {
+    if (finalTarget && !finalEnglish) {
+      finalEnglish = await translateText(finalTarget, langCode, 'en') || '';
+    } else if (!finalTarget && finalEnglish) {
+      finalTarget = await translateText(finalEnglish, 'en', langCode) || finalEnglish;
+    }
   }
 
   if (!authToken) { msg.className = 'add-word-msg error'; msg.textContent = 'Sign in via the extension first.'; btn.disabled = false; btn.textContent = 'Add to Word Bank'; return; }

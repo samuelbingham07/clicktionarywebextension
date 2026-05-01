@@ -54,6 +54,30 @@ window.addEventListener('message', async (event) => {
       });
     });
   }
+
+  if (type === 'CLICKTIONARY_GET_CUSTOM_LANGUAGES') {
+    chrome.storage.local.get('customLanguages', (data) => {
+      window.postMessage({
+        type: 'CLICKTIONARY_CUSTOM_LANGUAGES_RESPONSE',
+        customLanguages: data.customLanguages || []
+      }, BRIDGE_ORIGIN);
+    });
+  }
+
+  if (type === 'CLICKTIONARY_ADD_CUSTOM_LANGUAGE') {
+    chrome.storage.local.get('customLanguages', (data) => {
+      const existing = data.customLanguages || [];
+      const code = `custom_${Date.now()}`;
+      const newLang = { code, name: payload.name, flag: '📝' };
+      existing.push(newLang);
+      chrome.storage.local.set({ customLanguages: existing }, () => {
+        window.postMessage({
+          type: 'CLICKTIONARY_ADD_CUSTOM_LANGUAGE_RESPONSE',
+          customLanguage: newLang
+        }, BRIDGE_ORIGIN);
+      });
+    });
+  }
 });
 
 // Signal to the page that the extension bridge is ready, including any stored session
