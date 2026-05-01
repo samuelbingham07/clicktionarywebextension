@@ -398,45 +398,33 @@ async function quizletFillCard(term, definition) {
     }
   }
 
-  // Find the last empty term field
-  let termEl = allPm().filter(isTermField).reverse().find(isEmpty);
+  const terms = () => allPm().filter(isTermField);
+  const defs  = () => allPm().filter(isDefinitionField);
 
-  if (!termEl) {
-    // Click Add card
+  // Find the first empty term; its paired definition is at the same index.
+  // Index-based pairing is robust even when term and definition rows share
+  // no common DOM container (React re-renders strip custom attributes).
+  let termIdx = terms().findIndex(isEmpty);
+
+  if (termIdx === -1) {
     const btn = [...document.querySelectorAll('button')].find(b => /add\s*(a\s*)?card/i.test(b.textContent));
     if (!btn) return { success: false, error: 'No "Add card" button found.' };
-    const before = allPm().filter(isTermField).length;
+    const before = terms().length;
     btn.click();
     for (let i = 0; i < 20; i++) {
       await wait(100);
-      if (allPm().filter(isTermField).length > before) break;
+      if (terms().length > before) break;
     }
-    termEl = allPm().filter(isTermField).reverse().find(isEmpty);
+    termIdx = terms().findIndex(isEmpty);
   }
 
-  if (!termEl) return { success: false, error: 'No empty term slot found.' };
+  if (termIdx === -1) return { success: false, error: 'No empty term slot found.' };
 
-  // Mark the card's parent so we can find the definition field even after React re-renders
-  const card = termEl.closest('li, [class*="TermRow"], [class*="SetEditorRow"]') || termEl.parentElement;
-  card.setAttribute('data-ct-card', 'true');
-
-  fill(termEl, term);
+  fill(terms()[termIdx], term);
   await wait(300);
 
-  // Find definition field within the same card by marker
-  let defEl = null;
-  for (let i = 0; i < 15; i++) {
-    await wait(100);
-    const markedCard = document.querySelector('[data-ct-card]');
-    if (markedCard) {
-      defEl = [...markedCard.querySelectorAll('[pm-placeholder]')].find(isDefinitionField);
-    }
-    // Fallback: scan all pm fields
-    if (!defEl) defEl = allPm().find(el => isDefinitionField(el) && isEmpty(el));
-    if (defEl) break;
-  }
-  if (card) card.removeAttribute('data-ct-card');
-
+  // Re-query after React re-render; same index gives the paired definition field.
+  const defEl = defs()[termIdx];
   if (!defEl) return { success: false, error: 'Definition field not found.' };
 
   fill(defEl, definition);
