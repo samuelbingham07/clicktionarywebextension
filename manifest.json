@@ -59,7 +59,7 @@
         "bridge.js"
       ],
       "run_at": "document_start"
-    },
+    }
   ],
   "icons": {
     "16": "icon16.png",
