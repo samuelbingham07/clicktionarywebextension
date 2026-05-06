@@ -125,12 +125,24 @@ async function getAuthHeaders() {
 }
 
 async function supabaseFetch(path, options = {}) {
-  const headers = await getAuthHeaders();
+  let headers = await getAuthHeaders();
   if (!headers) return null;
-  const res = await fetch(`${SUPABASE_URL}/rest/v1${path}`, {
+
+  const doFetch = (hdrs) => fetch(`${SUPABASE_URL}/rest/v1${path}`, {
     ...options,
-    headers: { ...headers, ...(options.headers || {}) }
+    headers: { ...hdrs, ...(options.headers || {}) }
   });
+
+  let res = await doFetch(headers);
+
+  if (res.status === 401) {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      headers = await getAuthHeaders();
+      res = await doFetch(headers);
+    }
+  }
+
   if (!res.ok) {
     console.error('Supabase error:', res.status, await res.text());
     return null;
