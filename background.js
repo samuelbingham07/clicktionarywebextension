@@ -133,13 +133,22 @@ async function supabaseFetch(path, options = {}) {
     headers: { ...hdrs, ...(options.headers || {}) }
   });
 
-  let res = await doFetch(headers);
+  let res;
+  try {
+    res = await doFetch(headers);
+  } catch (_) {
+    return null;
+  }
 
   if (res.status === 401) {
     const refreshed = await refreshSession();
     if (refreshed) {
       headers = await getAuthHeaders();
-      res = await doFetch(headers);
+      try {
+        res = await doFetch(headers);
+      } catch (_) {
+        return null;
+      }
     }
   }
 
