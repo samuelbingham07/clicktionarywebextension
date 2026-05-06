@@ -401,6 +401,42 @@ function setupMainPanelListeners() {
     });
   });
 
+  // ── Quizlet Q button ──
+  document.getElementById('quizletBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('quizletBtn');
+
+    let selectedText = '';
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => window.getSelection().toString().trim()
+      });
+      selectedText = results?.[0]?.result || '';
+    } catch (_) {}
+
+    if (!selectedText) {
+      btn.textContent = '?';
+      setTimeout(() => { btn.textContent = 'Q'; }, 1500);
+      return;
+    }
+
+    const words = await new Promise(resolve =>
+      chrome.runtime.sendMessage({ type: 'GET_WORDS' }, r => resolve(r?.words || []))
+    );
+    const match = words.find(w => w.spanish?.toLowerCase() === selectedText.toLowerCase());
+    const translation = match?.english || '';
+
+    try {
+      await navigator.clipboard.writeText(`${selectedText}\t${translation}`);
+    } catch (_) {}
+
+    chrome.tabs.create({ url: 'https://quizlet.com/create-set' });
+    btn.textContent = '✓';
+    btn.classList.add('done');
+    setTimeout(() => { btn.textContent = 'Q'; btn.classList.remove('done'); }, 2000);
+  });
+
   // Sign out
   document.getElementById('signOutBtn').addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'SIGN_OUT' }, () => {

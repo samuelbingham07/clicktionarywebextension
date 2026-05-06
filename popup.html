@@ -344,7 +344,7 @@
     }
 
     .open-btn {
-      width: 100%;
+      flex: 1;
       background: #f0b400;
       color: #764c0f;
       border: none;
@@ -358,6 +358,23 @@
     }
 
     .open-btn:hover { background: #d4a000; }
+
+    .quizlet-q-btn {
+      width: 40px;
+      flex-shrink: 0;
+      background: #4257b2;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .quizlet-q-btn:hover { background: #3344a0; }
+    .quizlet-q-btn.done { background: #16a34a; cursor: default; }
 
     .tip {
       margin-top: 8px;
@@ -688,7 +705,10 @@
     </div>
 
     <div class="footer">
-      <button class="open-btn" id="openWordBank">Open Word Bank & Practice →</button>
+      <div style="display:flex;gap:8px">
+        <button class="open-btn" id="openWordBank">Open Word Bank & Practice →</button>
+        <button class="quizlet-q-btn" id="quizletBtn" title="Send highlighted word to Quizlet">Q</button>
+      </div>
       <div class="tip" id="saveTip">Highlight text on any webpage to save words</div>
       <div class="tip" style="margin-top:6px">Enjoying Clicktionary? <a href="https://chromewebstore.google.com/detail/odkjbifcbclfgecknhppbimkpgmoooff/reviews" target="_blank" style="color:#f0b400;text-decoration:none;font-weight:600">⭐ Leave a review</a></div>
     </div>
