@@ -51,7 +51,7 @@ function createTooltip() {
     </div>
     <div class="ct-footer">
       <button class="ct-add-btn">＋ Add to Word Bank</button>
-      <button class="ct-quizlet-btn" title="Copy term + definition for Quizlet Import">Export Set to Quizlet</button>
+      <button class="ct-quizlet-btn" title="Add to Quizlet">Q</button>
       <span class="ct-saved-msg">✓ Saved!</span>
     </div>
   `;
@@ -542,15 +542,13 @@ function sendToQuizlet() {
   const btn = t.querySelector('.ct-quizlet-btn');
   // Tab-separated: Quizlet's Import expects "term\tdefinition" per line
   navigator.clipboard.writeText(`${lastWord}\t${definition}`).then(() => {
-    btn.textContent = '✓ Copied!';
+    window.open('https://quizlet.com/create-set', '_blank');
+    btn.textContent = '✓';
     btn.disabled = true;
-    setTimeout(() => {
-      btn.textContent = 'Export Set to Quizlet';
-      btn.disabled = false;
-    }, 2000);
+    setTimeout(() => { btn.textContent = 'Q'; btn.disabled = false; }, 2000);
   }).catch(() => {
-    btn.textContent = '✕ Failed';
-    setTimeout(() => { btn.textContent = 'Export Set to Quizlet'; }, 2000);
+    btn.textContent = '✕';
+    setTimeout(() => { btn.textContent = 'Q'; }, 2000);
   });
 }
 

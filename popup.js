@@ -401,40 +401,24 @@ function setupMainPanelListeners() {
     });
   });
 
-  // ── Quizlet Q button ──
+  // ── Export Set to Quizlet ──
   document.getElementById('quizletBtn').addEventListener('click', async () => {
     const btn = document.getElementById('quizletBtn');
-
-    let selectedText = '';
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => window.getSelection().toString().trim()
-      });
-      selectedText = results?.[0]?.result || '';
-    } catch (_) {}
-
-    if (!selectedText) {
-      btn.textContent = '?';
-      setTimeout(() => { btn.textContent = 'Q'; }, 1500);
-      return;
-    }
 
     const words = await new Promise(resolve =>
       chrome.runtime.sendMessage({ type: 'GET_WORDS' }, r => resolve(r?.words || []))
     );
-    const match = words.find(w => w.spanish?.toLowerCase() === selectedText.toLowerCase());
-    const translation = match?.english || '';
+    if (!words.length) return;
 
+    const tsv = words.map(w => `${w.spanish}\t${w.english || ''}`).join('\n');
     try {
-      await navigator.clipboard.writeText(`${selectedText}\t${translation}`);
+      await navigator.clipboard.writeText(tsv);
     } catch (_) {}
 
     chrome.tabs.create({ url: 'https://quizlet.com/create-set' });
-    btn.textContent = '✓';
+    btn.textContent = '✓ Copied!';
     btn.classList.add('done');
-    setTimeout(() => { btn.textContent = 'Q'; btn.classList.remove('done'); }, 2000);
+    setTimeout(() => { btn.textContent = 'Export Set to Quizlet'; btn.classList.remove('done'); }, 2500);
   });
 
   // Sign out
