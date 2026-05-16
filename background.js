@@ -279,15 +279,20 @@ async function addWord(entry) {
       return 'error';
     };
 
-    let result = await trySupabaseInsert(headers);
+    let result;
+    try {
+      result = await trySupabaseInsert(headers);
 
-    // On 401, attempt token refresh and retry once
-    if (result === '401') {
-      const refreshed = await refreshSession();
-      if (refreshed) {
-        headers = await getAuthHeaders();
-        result = await trySupabaseInsert(headers);
+      // On 401, attempt token refresh and retry once
+      if (result === '401') {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          headers = await getAuthHeaders();
+          result = await trySupabaseInsert(headers);
+        }
       }
+    } catch (_) {
+      result = 'error';
     }
 
     if (result === 'ok' || result === 'duplicate') return true;
