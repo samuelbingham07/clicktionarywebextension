@@ -56,6 +56,20 @@
   white-space: nowrap;
 }
 
+.ct-speak-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ct-speak-btn:hover { opacity: 1; background: rgba(0,0,0,0.06); }
+
 .ct-close {
   background: none;
   border: none;

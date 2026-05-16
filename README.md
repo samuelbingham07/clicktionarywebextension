@@ -72,6 +72,7 @@ Go to `chrome://extensions`, click the **reload icon** on Clicktionary, then rel
 
 ## Features
 
+- **Pronunciation** — 🔊 button in the tooltip speaks the word aloud using the Web Speech API with the correct language accent
 - **Export Set to Quizlet** button on tooltip copies `term\tdefinition` to clipboard (paste into Quizlet → Create set → Import)
 - Tooltip translation for any highlighted text, 10 languages
 - Bundled Spanish dictionary for instant offline lookup (~1 100 words + phrases)

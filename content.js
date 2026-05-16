@@ -11,6 +11,12 @@ const LANGUAGE_NAMES = {
   ko: 'Korean', ar: 'Arabic'
 };
 
+const TTS_LANG = {
+  es: 'es-ES', fr: 'fr-FR', de: 'de-DE', it: 'it-IT',
+  pt: 'pt-PT', ru: 'ru-RU', zh: 'zh-CN', ja: 'ja-JP',
+  ko: 'ko-KR', ar: 'ar-SA'
+};
+
 // ── Keep language in sync with storage ──────────────────────────────────────
 chrome.storage.local.get('selectedLanguage', (r) => {
   if (r.selectedLanguage) currentLanguage = r.selectedLanguage;
@@ -32,6 +38,7 @@ function createTooltip() {
       <div class="ct-header-left">
         <span class="ct-lang"></span>
         <span class="ct-word" dir="auto"></span>
+        <button class="ct-speak-btn" title="Hear pronunciation">🔊</button>
       </div>
       <button class="ct-close">✕</button>
     </div>
@@ -57,6 +64,7 @@ function createTooltip() {
   `;
   document.body.appendChild(el);
   el.querySelector('.ct-close').addEventListener('click', hideTooltip);
+  el.querySelector('.ct-speak-btn').addEventListener('click', () => speakWord());
   el.querySelector('.ct-add-btn').addEventListener('click', () => addToWordBank());
   el.querySelector('.ct-quizlet-btn').addEventListener('click', () => sendToQuizlet());
   el.querySelector('.ct-custom-input').addEventListener('input', (e) => {
@@ -485,6 +493,15 @@ function renderDict(t, dict) {
     t.querySelector('.ct-definition').textContent = '';
   }
   t.querySelector('.ct-examples').textContent = dict.example ? `"${dict.example}"` : '';
+}
+
+// ── Pronounce word ──────────────────────────────────────────────────────────
+function speakWord() {
+  if (!lastWord) return;
+  const utterance = new SpeechSynthesisUtterance(lastWord);
+  utterance.lang = TTS_LANG[currentLanguage] || currentLanguage;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utterance);
 }
 
 // ── Add to Word Bank ────────────────────────────────────────────────────────
